@@ -1,0 +1,739 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="header" class="text-center">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>流域防洪知识图谱可视化</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vis-network@9.1.2/dist/dist/vis-network.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+
+        #header {
+            background-color: #ffffff;
+            color: #495057;
+            padding: 15px 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        #main-container {
+            display: flex;
+            min-height: calc(100vh - 70px);
+        }
+
+        #sidebar {
+            width: 300px;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            overflow-y: auto;
+            border-right: 1px solid #e9ecef;
+        }
+
+        #graph-container {
+            flex: 1;
+            position: relative;
+            background-color: #fff;
+        }
+
+        #cy {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .query-box {
+            margin-bottom: 20px;
+        }
+
+        .node-info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 50%;
+            border: 1px solid #e9ecef;
+        }
+
+        .btn-query {
+            background-color: #4e73df;
+            color: white;
+            border: none;
+        }
+
+        .btn-query:hover {
+            background-color: #2e59d9;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            display: none;
+        }
+
+        .predefined-query {
+            margin: 5px 0;
+            cursor: pointer;
+            color: #4e73df;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .predefined-query:hover {
+            background-color: #f0f4ff;
+        }
+
+        .form-control {
+            border: 1px solid #e9ecef;
+        }
+
+        .list-group-item {
+            border: 1px solid #e9ecef;
+        }
+    </style>
+</div>
+
+<!--<div id="header1" class="text-center">-->
+<!--    <h1 style="font-weight: 300;">流域防洪知识图谱可视化系统</h1>-->
+<!--</div>-->
+
+<div id="main-container">
+    <div id="sidebar">
+        <div class="query-box">
+            <h4 style="color: #495057;">Cypher 查询</h4>
+            <div class="mb-3">
+                <textarea id="cypher-query" class="form-control" rows="5"
+                          placeholder="输入Cypher查询语句，例如：MATCH (n:River)-[r]->(m) RETURN n, r, m"></textarea>
+            </div>
+            <button id="execute-query" class="btn btn-query btn-block">执行查询</button>
+
+            <div class="mt-3">
+                <h5 style="color: #495057;">常用查询</h5>
+                <div class="predefined-query" onclick="setQuery('MATCH (n:River) RETURN n LIMIT 50')">所有河流</div>
+                <div class="predefined-query" onclick="setQuery('MATCH (n:Basin) RETURN n LIMIT 50')">所有流域</div>
+                <div class="predefined-query"
+                     onclick="setQuery('MATCH (n:Reservoir)-[r:LOCATED_ON]->(m:River) RETURN n, r, m LIMIT 50')">
+                    水库及其所在河流
+                </div>
+                <div class="predefined-query"
+                     onclick="setQuery('MATCH (n:FloodControlFacility)-[r:PROTECTS]->(m:River) RETURN n, r, m LIMIT 50')">
+                    防洪设施及其保护河流
+                </div>
+                <div class="predefined-query"
+                     onclick="setQuery('MATCH (n:WeatherStation)-[r:MONITORS]->(m:Basin) RETURN n, r, m LIMIT 50')">
+                    气象站及其监测流域
+                </div>
+            </div>
+        </div>
+
+        <div class="node-info" id="node-details" style="display: none;">
+            <h4 style="color: #495057;">节点详情</h4>
+            <div id="node-properties"></div>
+        </div>
+
+        <div class="legend mt-4">
+            <h4 style="color: #495057;">图例说明</h4>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #3498db;"></div>
+                <span>河流 (River)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #2ecc71;"></div>
+                <span>流域 (Basin)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #e74c3c;"></div>
+                <span>水库 (Reservoir)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #f39c12;"></div>
+                <span>防洪设施 (FloodControlFacility)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #9b59b6;"></div>
+                <span>气象站 (WeatherStation)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #1abc9c;"></div>
+                <span>监测站 (MonitoringStation)</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="graph-container">
+        <div id="cy"></div>
+        <div id="loading" class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">加载中...</span>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.2/dist/vis-network.min.js"></script>
+
+<script>
+    // 全局变量
+    let network = null;
+    let allNodes = new vis.DataSet([]);
+    let allEdges = new vis.DataSet([]);
+
+    // 设置查询语句到输入框
+    function setQuery(query) {
+        document.getElementById('cypher-query').value = query;
+    }
+
+    // 执行查询
+    document.getElementById('execute-query').addEventListener('click', function () {
+        const query = document.getElementById('cypher-query').value.trim();
+
+        if (query) {
+            executeQuery(query);
+        } else {
+            alert('请输入查询语句');
+        }
+    });
+
+    function executeQuery(query) {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('node-details').style.display = 'none';
+
+        // 实际API调用
+        fetch('/neo4j/query', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                query: query,
+                parameters: {}
+            })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    //打印data对应的节点个数
+                    console.log('查询结果:', data.length);
+                    processAndDisplayData(data);
+                } else {
+                    throw new Error(data.error || '查询失败');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('查询出错: ' + error.message);
+            })
+            .finally(() => {
+                document.getElementById('loading').style.display = 'none';
+            });
+    }
+
+    // 处理并显示从后端API获取的数据
+    // 处理并显示从后端API获取的数据
+function processAndDisplayData(responseData) {
+    const records = responseData.data;
+    const nodesMap = new Map();
+    const edgesMap = new Map();
+
+    records.forEach(record => {
+        // 获取字段映射关系
+        const fieldLookup = record._fieldLookup;
+        const fields = record._fields;
+
+        // 处理节点n
+        if (fieldLookup.n !== undefined) {
+            const nodeData = fields[fieldLookup.n];
+            if (nodeData && Object.keys(nodeData).length > 0) {
+                const labels = inferNodeType(nodeData);
+                const visNode = createVisNode({
+                    ...nodeData,
+                    labels: labels
+                });
+                nodesMap.set(visNode.id, visNode);
+            }
+        }
+
+        // 处理节点m
+        if (fieldLookup.m !== undefined) {
+            const nodeData = fields[fieldLookup.m];
+            if (nodeData && Object.keys(nodeData).length > 0) {
+                const labels = inferNodeType(nodeData);
+                const visNode = createVisNode({
+                    ...nodeData,
+                    labels: labels
+                });
+                nodesMap.set(visNode.id, visNode);
+            }
+        }
+
+        // 处理关系 - 如果两个节点都存在且关系为空对象，则推断关系类型
+        if (fieldLookup.n !== undefined && fieldLookup.m !== undefined) {
+            const startNodeData = fields[fieldLookup.n];
+            const endNodeData = fields[fieldLookup.m];
+
+            if (startNodeData && endNodeData &&
+                Object.keys(startNodeData).length > 0 &&
+                Object.keys(endNodeData).length > 0) {
+
+                const relType = inferRelationshipType(startNodeData, endNodeData);
+                if (relType) {
+                    const visEdge = createVisEdge({
+                        type: relType,
+                        startNodeElementId: getNodeId(startNodeData),
+                        endNodeElementId: getNodeId(endNodeData),
+                        properties: fields[fieldLookup.r] || {}
+                    });
+                    edgesMap.set(visEdge.id, visEdge);
+                }
+            }
+        }
+    });
+
+    // 转换为数组
+    const nodesArray = Array.from(nodesMap.values());
+    const edgesArray = Array.from(edgesMap.values());
+    console.log('nodesArray:', nodesArray.length);
+    console.log('edgesArray:', edgesArray.length);
+    // 更新可视化
+    updateVisualization(nodesArray, edgesArray);
+
+    setTimeout(() => {
+        network.fit({
+            nodes: nodesArray.map(n => n.id),
+            animation: {
+                duration: 1500,
+                easingFunction: 'easeInOutQuint'
+            }
+        });
+        network.stabilize(200);
+    }, 300);
+}
+function getNodeId(nodeData) {
+    return nodeData.river_id || nodeData.basin_id || nodeData.reservoir_id ||
+           nodeData.facility_id || nodeData.station_id;
+}
+    // function processAndDisplayData(responseData) {
+    //     const records = responseData.data;
+    //     const nodesMap = new Map();
+    //     const edgesMap = new Map();
+    //     let loopCount = 0;
+    //     let loopN=0;
+    //     let loopM=0;
+    //     let loopR=0;
+    //     //输出data的长度
+    //     console.log('data的长度:', records.length);
+    //     records.forEach(record => {
+    //         // 处理节点n
+    //         loopCount++;
+    //         if (record.n) {
+    //             //记录n的个数
+    //             loopN++;
+    //             const node = record.n;
+    //             // 根据节点属性推断类型
+    //             const labels = inferNodeType(node);
+    //             const visNode = createVisNode({
+    //                 ...node,
+    //                 labels: labels
+    //             });
+    //             nodesMap.set(visNode.id, visNode);
+    //         }
+    //
+    //         // 处理节点m
+    //         if (record.m) {
+    //             loopM++;
+    //             const node = record.m;
+    //             // console.log('n的个数:', Object.keys(record.n).length);
+    //             // 根据节点属性推断类型
+    //             const labels = inferNodeType(node);
+    //             const visNode = createVisNode({
+    //                 ...node,
+    //                 labels: labels
+    //             });
+    //             nodesMap.set(visNode.id, visNode);
+    //         }
+    //
+    //         // 处理关系r - 您的数据中r为空对象，需要根据上下文推断关系类型
+    //         if (record.n && record.m) {
+    //             const relType = inferRelationshipType(record.n, record.m);
+    //             loopR++;
+    //             if (relType) {
+    //                 console.log("创建一次边")
+    //                 const visEdge = createVisEdge({
+    //                     type: relType,
+    //                     startNodeElementId: record.n.river_id || record.n.basin_id || record.n.reservoir_id || record.n.facility_id || record.n.station_id,
+    //                     endNodeElementId: record.m.river_id || record.m.basin_id || record.m.reservoir_id || record.m.facility_id || record.m.station_id,
+    //                     properties: {}
+    //                 });
+    //                 edgesMap.set(visEdge.id, visEdge);
+    //             }
+    //         }
+    //     });
+    //     console.log('loopCount:', loopCount, ' loopN:', loopN, ' loopM:', loopM, ' loopR:', loopR);
+    //     // 转换为数组
+    //     const nodesArray = Array.from(nodesMap.values());
+    //     const edgesArray = Array.from(edgesMap.values());
+    //     console.log('nodesArray:', nodesArray.length);
+    //     console.log('edgesArray:', edgesArray.length);
+    //     // 更新可视化
+    //     updateVisualization(nodesArray, edgesArray);
+    //     setTimeout(() => {
+    //     network.fit({
+    //         nodes: nodesArray.map(n => n.id),
+    //         animation: {
+    //             duration: 1500,
+    //             easingFunction: 'easeInOutQuint'
+    //         }
+    //     });
+    //     network.stabilize(200);  // 增加稳定化迭代
+    // }, 300);
+    // }
+
+    // 根据节点属性推断节点类型
+function inferNodeType(node) {
+    if (node.river_id !== undefined) return ['River'];
+    if (node.basin_id !== undefined) return ['Basin'];
+    if (node.reservoir_id !== undefined) return ['Reservoir'];
+    if (node.facility_id !== undefined) return ['FloodControlFacility'];
+    if (node.station_id !== undefined) return ['WeatherStation'];
+    return ['Unknown'];
+}
+
+// 根据两个节点类型推断关系类型
+function inferRelationshipType(node1, node2) {
+    if (node1.reservoir_id !== undefined && node2.river_id !== undefined) return 'LOCATED_ON';
+    if (node1.facility_id !== undefined && node2.river_id !== undefined) return 'PROTECTS';
+    if (node1.station_id !== undefined && node2.basin_id !== undefined) return 'MONITORS';
+    if (node1.river_id !== undefined && node2.basin_id !== undefined) return 'BELONGS_TO';
+    return 'RELATED_TO';
+}
+
+    function createVisNode(neo4jNode) {
+        const labels = neo4jNode.labels || ['Unknown'];
+        const properties = neo4jNode;
+        // 使用节点ID作为唯一标识
+        const elementId = neo4jNode.river_id || neo4jNode.basin_id || neo4jNode.reservoir_id ||
+            neo4jNode.facility_id || neo4jNode.station_id ||
+            `${labels.join('_')}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+
+        // 确定节点类型和颜色
+        let nodeType = labels[0];
+        let color = '#999999'; // 默认灰色
+        let label = nodeType;
+
+        // 根据节点类型设置颜色和标签
+        if (labels.includes('River')) {
+            nodeType = 'River';
+            color = '#3498db';
+            label = properties.name ? `${properties.name}\n[河流]` : '河流';
+        } else if (labels.includes('Basin')) {
+            nodeType = 'Basin';
+            color = '#2ecc71';
+            label = properties.name ? `${properties.name}\n[流域]` : '流域';
+        } else if (labels.includes('Reservoir')) {
+            nodeType = 'Reservoir';
+            color = '#e74c3c';
+            label = properties.name ? `${properties.name}\n[水库]` : '水库';
+        } else if (labels.includes('FloodControlFacility')) {
+            nodeType = 'FloodControlFacility';
+            color = '#f39c12';
+            label = properties.name ? `${properties.name}\n[防洪设施]` : '防洪设施';
+        } else if (labels.includes('WeatherStation')) {
+            nodeType = 'WeatherStation';
+            color = '#9b59b6';
+            label = properties.name ? `${properties.name}\n[气象站]` : '气象站';
+        }
+
+        return {
+            id: elementId.toString(),
+            label: label,
+            group: nodeType,
+            labels: labels,
+            properties: properties,
+            color: {
+                background: color,
+                border: '#2B7CE9',
+                highlight: {
+                    background: color,
+                    border: '#2B7CE9'
+                },
+                hover: {
+                    background: color,
+                    border: '#2B7CE9'
+                }
+            },
+            font: {
+                color: '#ffffff',
+                size: 12,
+                face: 'Microsoft YaHei',
+                strokeWidth: 2,
+                strokeColor: '#000000'
+            },
+            shape: 'dot',
+            size: 20,
+            borderWidth: 2
+        };
+    }
+
+    function createVisEdge(neo4jRel) {
+        return {
+            id: `${neo4jRel.type}_${neo4jRel.startNodeElementId}_${neo4jRel.endNodeElementId}`,
+            from: neo4jRel.startNodeElementId.toString(),
+            to: neo4jRel.endNodeElementId.toString(),
+            label: neo4jRel.type,
+            properties: neo4jRel.properties,
+            arrows: 'to',
+            color: {
+                color: '#666666',
+                highlight: '#ff0000',
+                hover: '#ff0000'
+            },
+            width: 2,
+            font: {
+                size: 10,
+                face: 'Microsoft YaHei',
+                align: 'top'
+            },
+            smooth: {
+                type: "continuous"
+            }
+        };
+    }
+
+    // 更新可视化
+    function updateVisualization(nodesArray, edgesArray) {
+        const container = document.getElementById('cy');
+
+        // 清空现有数据
+        allNodes.clear();
+        allEdges.clear();
+
+        // 添加新数据
+        allNodes.add(nodesArray);
+        allEdges.add(edgesArray);
+
+        // 如果网络未初始化，创建新网络
+        if (!network) {
+            const data = {
+                nodes: allNodes,
+                edges: allEdges
+            };
+
+            const options = {
+        nodes: {
+            shape: 'dot',
+            size: 25,  // 增大节点尺寸
+            font: {
+                size: 14,  // 增大字体
+                face: 'Microsoft YaHei',
+                strokeWidth: 2,
+                strokeColor: '#000000'
+            },
+            borderWidth: 2,
+            fixed: {
+                x: false,
+                y: false
+            }
+        },
+        edges: {
+            width: 2,
+            arrows: {
+                to: {enabled: true, scaleFactor: 0.7}
+            },
+            font: {
+                size: 12,  // 增大关系字体
+                face: 'Microsoft YaHei',
+                align: 'top'
+            },
+            smooth: {
+                type: "horizontal"
+            }
+        },
+        physics: {
+            stabilization: true,  // 启用稳定化
+            barnesHut: {
+                gravitationalConstant: -1500,  // 调整引力常数
+                centralGravity: 0.5,
+                springLength: 150,  // 缩短弹簧长度
+                springConstant: 0.01,
+                damping: 0.5,  // 增加阻尼系数
+                avoidOverlap: 0.2  // 避免节点重叠
+            }
+        },
+        interaction: {
+            hover: true,
+            tooltipDelay: 200,
+            multiselect: true,
+            hideEdgesOnDrag: false
+        },
+        layout: {
+            improvedLayout: true,
+            hierarchical: {  // 添加层次布局选项
+                enabled: false,
+                direction: "UD",
+                sortMethod: "directed"
+            }
+        },
+        configure: {
+            enabled: false,
+            filter: true
+        }
+    };
+
+            network = new vis.Network(container, data, options);
+
+            // 添加节点点击事件
+            network.on("click", function (params) {
+                if (params.nodes.length > 0) {
+                    const nodeId = params.nodes[0];
+                    const node = allNodes.get(nodeId);
+                    showNodeDetails(node);
+                } else {
+                    document.getElementById('node-details').style.display = 'none';
+                }
+            });
+
+            // 双击空白处重置视图
+            network.on("doubleClick", function (params) {
+                if (params.nodes.length === 0 && params.edges.length === 0) {
+                    network.fit();
+                }
+            });
+        } else {
+            // 如果网络已存在，只需更新数据
+            network.setData({nodes: allNodes, edges: allEdges});
+        }
+
+        // 自动调整视图
+        network.fit({
+            animation: {
+                duration: 1000,
+                easingFunction: 'easeInOutQuad'
+            }
+        });
+    }
+
+    // 显示节点详情
+    function showNodeDetails(node) {
+        const nodeDetails = document.getElementById('node-details');
+        const nodeProperties = document.getElementById('node-properties');
+
+        nodeDetails.style.display = 'block';
+        nodeProperties.innerHTML = '';
+
+        // 添加节点类型标题
+        const typeHeader = document.createElement('h5');
+        typeHeader.textContent = node.labels ? node.labels.join(', ') : '未知类型';
+        nodeProperties.appendChild(typeHeader);
+
+        // 添加属性列表
+        const propertiesList = document.createElement('ul');
+        propertiesList.className = 'list-group list-group-flush';
+
+        if (node.properties) {
+            // 排除内部使用的属性
+            const excludeProps = ['labels', 'id', 'group'];
+
+            for (const [key, value] of Object.entries(node.properties)) {
+                if (excludeProps.includes(key)) continue;
+
+                const listItem = document.createElement('li');
+                listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+                const propKey = document.createElement('span');
+                propKey.className = 'font-weight-bold';
+                propKey.textContent = key;
+
+                const propValue = document.createElement('span');
+                propValue.className = 'text-muted';
+
+                // 处理不同类型的值
+                if (value === null || value === undefined) {
+                    propValue.textContent = 'null';
+                } else if (typeof value === 'object') {
+                    propValue.textContent = JSON.stringify(value);
+                } else {
+                    propValue.textContent = value.toString();
+                }
+
+                listItem.appendChild(propKey);
+                listItem.appendChild(propValue);
+                propertiesList.appendChild(listItem);
+            }
+        } else {
+            const listItem = document.createElement('li');
+            listItem.className = 'list-group-item';
+            listItem.textContent = '无属性信息';
+            propertiesList.appendChild(listItem);
+        }
+
+        nodeProperties.appendChild(propertiesList);
+    }
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function () {
+        // 初始查询示例
+        setQuery('MATCH (n)-[r]->(m) RETURN n, r, m ');
+
+        // 自动执行初始查询
+        document.getElementById('execute-query').click();
+    });
+</script>
+<style>
+    /* 增加容器高度约束 */
+    #main-container {
+        display: flex;
+        min-height: calc(100vh - 70px);
+        height: 100vh;  /* 新增固定高度 */
+        overflow: hidden;  /* 防止滚动条出现 */
+    }
+
+    #graph-container {
+        flex: 1;
+        position: relative;
+        background-color: #fff;
+        height: calc(100vh - 70px);  /* 固定高度 */
+    }
+
+    /* 添加缩放控件样式 */
+    .vis-navigation {
+        position: absolute;
+        right: 10px;
+        bottom: 10px;
+        background: rgba(255,255,255,0.8);
+        padding: 5px;
+        border-radius: 3px;
+        box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    }
+</style>
+
+{% endblock %}

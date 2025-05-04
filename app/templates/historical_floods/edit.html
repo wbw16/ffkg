@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card border-warning">
+        <!-- 卡片头部 -->
+        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-0">
+                    <i class="bi bi-pencil-square me-2"></i>
+                    编辑历史洪水记录 #{{ flood.flood_id }}
+                </h4>
+                <span class="badge bg-light text-dark mt-2">
+                    <i class="bi bi-calendar me-1"></i>
+                    记录时间：{{ flood.created_at.strftime('%Y-%m-%d %H:%M') }}
+                </span>
+            </div>
+            <span class="badge bg-{{ 'danger' if not flood.end_time else 'success' }}">
+                {% if not flood.end_time %}
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> 进行中
+                {% else %}
+                <i class="bi bi-check-circle-fill me-1"></i> 已结束
+                {% endif %}
+            </span>
+        </div>
+
+        <div class="card-body">
+            <form method="POST" id="editFloodForm">
+                {{ form.hidden_tag() }}
+
+                <!-- 第一行：河流信息和洪水关键数据 -->
+                <div class="row mb-4">
+                    <!-- 河流信息 -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header py-2 bg-light">
+                                <i class="bi bi-info-circle me-2"></i>基础信息
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">关联河流</label>
+                                    <div class="p-2 bg-light rounded">
+                                        <i class="bi bi-water me-2 text-primary"></i>
+                                        <strong>{{ flood.river.name }}</strong>
+                                        <div class="mt-2 small text-muted">
+                                            记录创建：{{ flood.created_at.strftime('%Y-%m-%d') }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    {{ form.max_water_level.label(class="form-label fw-bold") }}
+                                    <div class="input-group">
+                                        {{ form.max_water_level(
+                                            class="form-control",
+                                            value="%.3f"|format(flood.max_water_level)
+                                        ) }}
+                                        <span class="input-group-text">m</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mt-1">
+                                        <small class="text-muted">
+                                            原值: <strong>{{ "%.3f"|format(flood.max_water_level) }}</strong>
+                                        </small>
+                                        <small class="text-muted">
+                                            当前差值:
+                                            <span id="waterLevelDiff">0.000</span>m
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 时间信息 -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header py-2 bg-light">
+                                <i class="bi bi-clock me-2"></i>时间范围
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    {{ form.start_time.label(class="form-label fw-bold") }}
+                                    <div class="input-group">
+                                        {{ form.start_time(
+                                            class="form-control",
+                                            value=flood.start_time.strftime('%Y-%m-%d %H:%M')
+                                        ) }}
+                                    </div>
+                                    <small class="text-muted">
+                                        原始开始时间：{{ flood.start_time.strftime('%Y-%m-%d %H:%M') }}
+                                    </small>
+                                </div>
+
+                                <div class="mb-3">
+                                    {{ form.end_time.label(class="form-label fw-bold") }}
+                                    <div class="input-group">
+                                        {{ form.end_time(
+                                            class="form-control",
+                                            value=flood.end_time.strftime('%Y-%m-%d %H:%M') if flood.end_time else ''
+                                        ) }}
+                                    </div>
+                                    <small class="text-muted">
+                                        {% if flood.end_time %}
+                                        原始结束时间：{{ flood.end_time.strftime('%Y-%m-%d %H:%M') }}
+                                        {% else %}
+                                        本次洪水尚未标注结束时间
+                                        {% endif %}
+                                    </small>
+                                </div>
+
+                                <div class="alert alert-info py-2 mb-0">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    持续天数:
+                                    <strong>{{ flood.duration_days or '未结束' }}</strong> 天
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第二行：详细数据 -->
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header py-2 bg-light">
+                                <i class="bi bi-clipboard-data me-2"></i>详细数据
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ form.affected_area.label(class="form-label fw-bold") }}
+                                            <div class="input-group">
+                                                {{ form.affected_area(
+                                                    class="form-control",
+                                                    value="%.2f"|format(flood.affected_area) if flood.affected_area else ''
+                                                ) }}
+                                                <span class="input-group-text">km²</span>
+                                            </div>
+                                            <small class="text-muted">
+                                                原值: {{ "%.2f"|format(flood.affected_area) if flood.affected_area else '未记录' }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ form.damage_level.label(class="form-label fw-bold") }}
+                                            {{ form.damage_level(class="form-select") }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="d-flex justify-content-between border-top pt-3">
+                    <button type="button" class="btn btn-danger"
+                            data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="bi bi-trash3 me-1"></i> 删除记录
+                    </button>
+                    <div>
+                        <a href="{{ url_for('historical_flood.list_floods') }}"
+                           class="btn btn-secondary me-2">
+                            <i class="bi bi-x-circle me-1"></i> 取消
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i> 保存更改
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    确认删除历史记录 #{{ flood.flood_id }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger mb-3">
+                    <i class="bi bi-exclamation-octagon-fill me-2"></i>
+                    您正在删除<strong>{{ flood.river.name }}</strong>的重要历史洪水数据
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="text-muted small">起止时间</div>
+                                <div class="h6">
+                                    {{ flood.start_time.strftime('%Y-%m-%d') }}
+                                    <small>至</small>
+                                    {{ flood.end_time.strftime('%Y-%m-%d') if flood.end_time else '进行中' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="text-muted small">最高水位</div>
+                                <div class="h4 text-danger">
+                                    {{ "%.3f"|format(flood.max_water_level) }} <small>m</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning small mt-3">
+                    <i class="bi bi-info-circle-fill me-1"></i>
+                    删除后将影响历史统计分析，且无法恢复
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i> 取消
+                </button>
+                <form action="{{ url_for('historical_flood.delete_flood', flood_id=flood.flood_id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash-fill me-1"></i> 确认删除
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 实时计算脚本 -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 水位差值实时计算
+    const waterLevelInput = document.getElementById('max_water_level');
+    const originalWaterLevel = {{ flood.max_water_level }};
+
+    if (waterLevelInput) {
+        waterLevelInput.addEventListener('input', function() {
+            const newValue = parseFloat(this.value);
+            if (!isNaN(newValue)) {
+                const diff = (newValue - originalWaterLevel).toFixed(3);
+                document.getElementById('waterLevelDiff').textContent = diff;
+                document.getElementById('waterLevelDiff').className =
+                    diff >= 0 ? 'text-danger' : 'text-success';
+            }
+        });
+    }
+
+    // 时间验证
+    const startTimeInput = document.getElementById('start_time');
+    const endTimeInput = document.getElementById('end_time');
+
+    function validateTimes() {
+        if (startTimeInput.value && endTimeInput.value) {
+            if (new Date(startTimeInput.value) >= new Date(endTimeInput.value)) {
+                endTimeInput.setCustomValidity('结束时间必须晚于开始时间');
+            } else {
+                endTimeInput.setCustomValidity('');
+            }
+        }
+    }
+
+    startTimeInput.addEventListener('change', validateTimes);
+    endTimeInput.addEventListener('change', validateTimes);
+});
+</script>
+{% endblock %}

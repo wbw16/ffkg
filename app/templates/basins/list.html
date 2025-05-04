@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}流域列表{% endblock %}
+{% block header %}
+    <h2>流域管理</h2>
+    <a href="{{ url_for('basin.create_basin') }}" class="btn-add">新增流域</a>
+{% endblock %}
+
+{% block content %}
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>流域ID</th>
+                    <th>流域名称</th>
+                    <th>面积(km²)</th>
+                    <th>所在区域</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for basin in basins %}
+                    <tr>
+                        <td>{{ basin.basin_id }}</td>
+                        <td>{{ basin.name }}</td>
+                        <td>{{ "%.2f"|format(basin.area) }}</td>
+                        <td>{{ basin.region }}</td>
+                        <td class="actions">
+                            <a href="{{ url_for('basin.edit_basin', basin_id=basin.basin_id) }}" class="btn-edit">编辑</a>
+                            <form action="{{ url_for('basin.delete_basin', basin_id=basin.basin_id) }}" method="post">
+                                <button type="submit" class="btn-delete" onclick="return confirm('确定要删除这个流域吗？')">删除</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="no-data">暂无流域数据</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

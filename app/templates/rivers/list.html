@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}河流列表{% endblock %}
+{% block header %}
+    <h2>河流管理</h2>
+    <a href="{{ url_for('river.create_river') }}" class="btn-add">新增河流</a>
+{% endblock %}
+
+{% block content %}
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>河流ID</th>
+                    <th>河流名称</th>
+                    <th>长度(km)</th>
+                    <th>所属流域</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for river in rivers %}
+                    <tr>
+                        <td>{{ river.river_id }}</td>
+                        <td>{{ river.name }}</td>
+                        <td>{{ "%.2f"|format(river.length) }}</td>
+                        <td>{{ river.basin.name }}</td>
+                        <td class="actions">
+                            <a href="{{ url_for('river.edit_river', river_id=river.river_id) }}" class="btn-edit">编辑</a>
+                            <form action="{{ url_for('river.delete_river', river_id=river.river_id) }}" method="post">
+                                <button type="submit" class="btn-delete" onclick="return confirm('确定要删除这条河流吗？相关的水库和设施也将被删除！')">删除</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="no-data">暂无河流数据</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

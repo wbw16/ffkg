@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% from "_macros.html" import render_status_badge %}
+
+{% block title %}{{ model_name }}阈值管理{% endblock %}
+{% block header %}
+    <h2>{{ model_name }}阈值管理</h2>
+    <a href="{{ url_for('threshold.create_threshold') }}" class="btn-add">
+        <i class="bi bi-plus-lg"></i> 新建阈值
+    </a>
+{% endblock %}
+
+{% block content %}
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th width="15%">阈值ID</th>
+                    <th width="20%">阈值数值</th>
+                    <th>描述说明</th>
+                    <th width="15%">创建时间</th>
+                    <th width="15%">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for threshold in thresholds %}
+                <tr>
+                    <td class="numeric">#{{ threshold.threshold_id }}</td>
+                    <td class="numeric">
+                        {{ "%.3f"|format(threshold.threshold_value) }}
+                        {% if threshold.is_exceeded(latest_value) %}
+                        <span class="status-badge danger">已超限</span>
+                        {% endif %}
+                    </td>
+                    <td class="summary">
+                        {{ threshold.description|default('暂无描述', true)|truncate(100) }}
+                    </td>
+                    <td>{{ threshold.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('threshold.edit_threshold', threshold_id=threshold.threshold_id) }}"
+                           class="btn-edit">
+                            <i class="bi bi-pencil"></i> 编辑
+                        </a>
+                        <button class="btn-delete"
+                                onclick="showDeleteModal('{{ threshold.threshold_id }}', '{{ "%.3f"|format(threshold.threshold_value) }}')">
+                            <i class="bi bi-trash"></i> 删除
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="no-data">
+                        <i class="bi bi-database-exclamation"></i> 暂无阈值配置
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 删除确认模态框 (默认隐藏) -->
+    <div id="deleteModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4>确认删除阈值</h4>
+                <span class="close" onclick="hideDeleteModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="warning-message">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    您正在删除阈值为 <strong id="modal-threshold-value"></strong> 的配置
+                </div>
+                <div class="warning-note">
+                    <i class="bi bi-info-circle"></i>
+                    删除后将影响相关预警功能，请谨慎操作！
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="hideDeleteModal()" class="btn-cancel">取消</button>
+                <form id="deleteForm" method="POST">
+                    <button type="submit" class="btn-confirm-delete">确认删除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showDeleteModal(thresholdId, thresholdValue) {
+            document.getElementById('modal-threshold-value').textContent = thresholdValue;
+            document.getElementById('deleteForm').action =
+                '/threshold/delete_threshold/' + thresholdId;
+            document.getElementById('deleteModal').style.display = 'block';
+        }
+
+        function hideDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+        }
+
+        // 点击模态框外部关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('deleteModal');
+            if (event.target == modal) {
+                hideDeleteModal();
+            }
+        }
+    </script>
+{% endblock %}

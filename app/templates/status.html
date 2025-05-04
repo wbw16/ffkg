@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}服务器状态{% endblock %}
+
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        .card { margin-bottom: 20px; }
+        .progress { height: 25px; }
+        .progress-bar { font-size: 14px; line-height: 25px; }
+        .chart-container { height: 300px; }
+        .table-container { max-height: 400px; overflow-y: auto; }
+    </style>
+    <div class="container-fluid py-4">
+        <h1 class="text-center mb-4">服务器状态监控</h1>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">系统信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>系统:</strong> <span id="system-name">-</span></p>
+                        <p><strong>主机名:</strong> <span id="system-node">-</span></p>
+                        <p><strong>版本:</strong> <span id="system-version">-</span></p>
+                        <p><strong>启动时间:</strong> <span id="system-boot-time">-</span></p>
+                        <p><strong>最后更新:</strong> <span id="system-timestamp">-</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="card-title mb-0">CPU 状态</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>使用率:</strong></p>
+                        <div class="progress">
+                            <div id="cpu-progress" class="progress-bar progress-bar-striped" role="progressbar" style="width: 0%">0%</div>
+                        </div>
+                        <p class="mt-2"><strong>物理核心:</strong> <span id="cpu-count">-</span></p>
+                        <p><strong>逻辑核心:</strong> <span id="cpu-count-logical">-</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="card-title mb-0">内存状态</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>使用率:</strong></p>
+                        <div class="progress">
+                            <div id="memory-progress" class="progress-bar progress-bar-striped bg-warning" role="progressbar" style="width: 0%">0%</div>
+                        </div>
+                        <p class="mt-2"><strong>已用:</strong> <span id="memory-used">-</span> GB / <span id="memory-total">-</span> GB</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="card-title mb-0">磁盘状态</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>使用率 (根分区):</strong></p>
+                        <div class="progress">
+                            <div id="disk-progress" class="progress-bar progress-bar-striped bg-danger" role="progressbar" style="width: 0%">0%</div>
+                        </div>
+                        <p class="mt-2"><strong>已用:</strong> <span id="disk-used">-</span> GB / <span id="disk-total">-</span> GB</p>
+                        <div id="disk-chart" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="card-title mb-0">网络状态</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>发送:</strong> <span id="network-sent">-</span> MB</p>
+                        <p><strong>接收:</strong> <span id="network-recv">-</span> MB</p>
+                        <div id="network-chart" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="card-title mb-0">进程状态 (Top 10 by CPU)</h5>
+                    </div>
+                    <div class="card-body table-container">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>PID</th>
+                                    <th>名称</th>
+                                    <th>用户</th>
+                                    <th>CPU %</th>
+                                    <th>内存 %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="process-table">
+                                <!-- 进程数据将通过JavaScript动态填充 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化图表
+        const diskChart = echarts.init(document.getElementById('disk-chart'));
+        const networkChart = echarts.init(document.getElementById('network-chart'));
+
+        // 磁盘图表配置
+        const diskChartOption = {
+            tooltip: {
+                trigger: 'item'
+            },
+            series: [{
+                name: '磁盘使用',
+                type: 'pie',
+                radius: ['40%', '70%'],
+                avoidLabelOverlap: false,
+                itemStyle: {
+                    borderRadius: 10,
+                    borderColor: '#fff',
+                    borderWidth: 2
+                },
+                label: {
+                    show: false,
+                    position: 'center'
+                },
+                emphasis: {
+                    label: {
+                        show: true,
+                        fontSize: '18',
+                        fontWeight: 'bold'
+                    }
+                },
+                labelLine: {
+                    show: false
+                },
+                data: [
+                    { value: 0, name: '已用' },
+                    { value: 100, name: '可用' }
+                ]
+            }]
+        };
+
+        // 网络图表配置
+        const networkChartOption = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'shadow'
+                }
+            },
+            xAxis: {
+                type: 'value'
+            },
+            yAxis: {
+                type: 'category',
+                data: ['发送', '接收']
+            },
+            series: [{
+                name: '网络流量',
+                type: 'bar',
+                data: [0, 0],
+                itemStyle: {
+                    color: function(params) {
+                        const colorList = ['#5470C6', '#91CC75'];
+                        return colorList[params.dataIndex];
+                    }
+                }
+            }]
+        };
+
+        diskChart.setOption(diskChartOption);
+        networkChart.setOption(networkChartOption);
+
+        // 更新数据函数
+        function updateSystemInfo() {
+            fetch('/api/system_info')
+                .then(response => response.json())
+                .then(data => {
+                    // 更新系统信息
+                    document.getElementById('system-name').textContent = `${data.system.info.system} ${data.system.info.release}`;
+                    document.getElementById('system-node').textContent = data.system.info.node;
+                    document.getElementById('system-version').textContent = data.system.info.version;
+                    document.getElementById('system-boot-time').textContent = data.system.boot_time;
+                    document.getElementById('system-timestamp').textContent = data.timestamp;
+
+                    // 更新CPU信息
+                    document.getElementById('cpu-progress').style.width = `${data.cpu.percent}%`;
+                    document.getElementById('cpu-progress').textContent = `${data.cpu.percent}%`;
+                    document.getElementById('cpu-count').textContent = data.cpu.count;
+                    document.getElementById('cpu-count-logical').textContent = data.cpu.count_logical;
+
+                    // 更新内存信息
+                    document.getElementById('memory-progress').style.width = `${data.memory.percent}%`;
+                    document.getElementById('memory-progress').textContent = `${data.memory.percent}%`;
+                    document.getElementById('memory-used').textContent = data.memory.used;
+                    document.getElementById('memory-total').textContent = data.memory.total;
+
+                    // 更新磁盘信息
+                    document.getElementById('disk-progress').style.width = `${data.disk.percent}%`;
+                    document.getElementById('disk-progress').textContent = `${data.disk.percent}%`;
+                    document.getElementById('disk-used').textContent = data.disk.used;
+                    document.getElementById('disk-total').textContent = data.disk.total;
+
+                    // 更新磁盘图表
+                    diskChart.setOption({
+                        series: [{
+                            data: [
+                                { value: data.disk.percent, name: '已用' },
+                                { value: 100 - data.disk.percent, name: '可用' }
+                            ]
+                        }]
+                    });
+
+                    // 更新网络信息
+                    document.getElementById('network-sent').textContent = data.network.sent;
+                    document.getElementById('network-recv').textContent = data.network.recv;
+
+                    // 更新网络图表
+                    networkChart.setOption({
+                        series: [{
+                            data: [data.network.sent, data.network.recv]
+                        }]
+                    });
+
+                    // 更新进程表格
+                    const processTable = document.getElementById('process-table');
+                    processTable.innerHTML = '';
+                    data.processes.forEach(proc => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${proc.pid}</td>
+                            <td>${proc.name}</td>
+                            <td>${proc.username}</td>
+                            <td>${proc.cpu_percent}</td>
+                            <td>${proc.memory_percent}</td>
+                        `;
+                        processTable.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error fetching system info:', error));
+        }
+
+        // 初始加载数据
+        updateSystemInfo();
+
+        // 每3秒更新一次数据
+        setInterval(updateSystemInfo, 3000);
+
+        // 窗口大小变化时重新调整图表大小
+        window.addEventListener('resize', function() {
+            diskChart.resize();
+            networkChart.resize();
+        });
+    </script>
+{% endblock %}

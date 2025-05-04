@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+
+{% block title %}水利知识平台{% endblock %}
+
+{% block content %}
+<style>
+    /* 新增知识图谱容器样式 */
+    .knowledge-graph-section {
+        margin: 30px 0;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .graph-header {
+        padding: 15px 20px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #eee;
+    }
+
+    #graph-container {
+        height: 500px;
+        width: 100%;
+        border: 1px solid #ddd;
+    }
+
+    /* 调整原有布局间距 */
+    .recent-added {
+        margin-top: 30px;
+    }
+
+    .knowledge-graph-section .btn {
+        white-space: nowrap;
+        margin-left: 15px;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .knowledge-graph-section .btn i {
+        margin-right: 5px;
+    }
+
+    /* 响应式调整 */
+    @media (max-width: 768px) {
+        .graph-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .knowledge-graph-section .btn {
+            margin: 10px 0 0 0;
+            align-self: flex-end;
+        }
+    }
+</style>
+<div class="dashboard">
+    <section class="welcome-banner">
+        <h1>欢迎使用水利知识管理平台</h1>
+        <p class="subtitle">一体化水利设施数据管理与分析系统</p>
+    </section>
+
+    <div class="stats-cards">
+        <div class="card">
+            <h3><a href="{{ url_for('basin.list_basins') }}">流域数据</a></h3>
+            <div class="stat">{{ basin_count }}</div>
+            <p>登记流域数量</p>
+        </div>
+
+        <div class="card">
+            <h3><a href="{{ url_for('river.list_rivers') }}">河流数据</a></h3>
+            <div class="stat">{{ river_count }}</div>
+            <p>监测河流数量</p>
+        </div>
+
+        <div class="card">
+            <h3><a href="{{ url_for('reservoir.list_reservoirs') }}">水库数据</a></h3>
+            <div class="stat">{{ reservoir_count }}</div>
+            <p>管理水库数量</p>
+        </div>
+
+        <div class="card">
+            <h3><a href="{{ url_for('station.list_stations') }}">气象监测</a></h3>
+            <div class="stat">{{ station_count }}</div>
+            <p>气象站点数量</p>
+        </div>
+    </div>
+    <!-- 新增知识图谱部分 -->
+    <section class="knowledge-graph-section">
+        <div class="graph-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2><i class="bi bi-diagram-3"></i> 水利知识图谱</h2>
+                    <p>可视化展示水利设施关联关系</p>
+                </div>
+                <a href="{{ url_for('main.knowledge_graph') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-right-circle"></i> 查看完整图谱
+                </a>
+            </div>
+        </div>
+        <div id="graph-container">
+            <div id="graph-loading">正在加载知识图谱...</div>
+            <svg id="graph-svg">
+                <g id="zoomable-container"></g>
+            </svg>
+        </div>
+    </section>
+
+    <section class="quick-actions">
+        <h2>快速操作</h2>
+        <div class="action-buttons">
+            <a href="{{ url_for('basin.create_basin') }}" class="action-btn">
+                <i class="icon">🏞️</i>
+                <span>新增流域</span>
+            </a>
+            <a href="{{ url_for('river.create_river') }}" class="action-btn">
+                <i class="icon">🌊</i>
+                <span>登记河流</span>
+            </a>
+            <a href="{{ url_for('monitor.create_monitor') }}" class="action-btn">
+                <i class="icon">📊</i>
+                <span>添加监测站</span>
+            </a>
+            <a href="{{ url_for('facility.create_facility') }}" class="action-btn">
+                <i class="icon">🛡️</i>
+                <span>记录防洪设施</span>
+            </a>
+        </div>
+    </section>
+
+    <section class="recent-added">
+        <h2>最近添加</h2>
+        <div class="recent-items">
+            <div class="recent-column">
+                <h4><i class="icon">🆕</i> 最新流域</h4>
+                {% if recent_basins %}
+                <ul>
+                    {% for basin in recent_basins %}
+                    <li>
+                        <a href="{{ url_for('basin.edit_basin', basin_id=basin.basin_id) }}">
+                            {{ basin.name }} ({{ basin.region }})
+                        </a>
+                        <span class="recent-time">{{ basin.created_at.strftime('%Y-%m-%d') if basin.created_at else '' }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="no-data">暂无流域数据</p>
+                {% endif %}
+            </div>
+
+            <div class="recent-column">
+                <h4><i class="icon">🆕</i> 最新监测站</h4>
+                {% if recent_monitors %}
+                <ul>
+                    {% for monitor in recent_monitors %}
+                    <li>
+                        <a href="{{ url_for('monitor.edit_monitor', monitor_id=monitor.monitor_id) }}">
+                            {{ monitor.name }} ({{ monitor.type }})
+                        </a>
+                        <span class="recent-time">{{ monitor.created_at.strftime('%Y-%m-%d') if monitor.created_at else '' }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="no-data">暂无监测站数据</p>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+</div>
+<script>
+    // 配置对象
+    const config = {
+        nodeRadius: 12,
+        linkDistance: 120,
+        chargeStrength: -150,
+        nodeColors: {
+            "River": "#1f77b4",
+            "Basin": "#ff7f0e",
+            "Reservoir": "#2ca02c",
+            "FloodControlFacility": "#d62728",
+            "WeatherStation": "#9467bd",
+            "MonitoringStation": "#8c564b"
+        }
+    };
+
+    // 初始化图形
+    function initGraph() {
+        const container = document.getElementById('graph-container');
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+
+        const svg = d3.select('#graph-svg')
+            .attr('width', width)
+            .attr('height', height);
+
+        // 添加缩放行为
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 8])
+            .on('zoom', (event) => {
+                d3.select('#zoomable-container').attr('transform', event.transform);
+            });
+        svg.call(zoom);
+
+        // 执行默认查询
+        executeDefaultQuery();
+    }
+
+    // 执行默认查询
+    async function executeDefaultQuery() {
+        const loadingEl = document.getElementById('graph-loading');
+        try {
+            loadingEl.style.display = 'block';
+
+            const response = await axios.post('/neo4j/query', {
+                query: "MATCH (n)-[r]->(m) RETURN n, labels(n) as n_labels, r, m, labels(m) as m_labels",
+                parameters: {}
+            });
+
+            const data = transformData(response.data);
+            renderGraph(data);
+
+        } catch (error) {
+            console.error('加载知识图谱失败:', error);
+            loadingEl.textContent = '加载失败: ' + (error.response?.data?.error || error.message);
+        } finally {
+            loadingEl.style.display = 'none';
+        }
+    }
+
+    // 数据转换
+    function transformData(neo4jData) {
+        const nodes = [];
+        const links = [];
+        const nodeMap = new Map();
+
+        neo4jData.data.forEach(record => {
+            // 处理节点n
+            if (record._fields[0]) {
+                const nodeData = record._fields[0];
+                const nodeId = nodeData.id || nodeData._id || JSON.stringify(nodeData);
+                const labels = record._fields[record._fieldLookup.n_labels] || ['Node'];
+
+                if (!nodeMap.has(nodeId)) {
+                    nodes.push({
+                        id: nodeId,
+                        type: labels[0],
+                        label: nodeData.name || labels[0],
+                        properties: nodeData
+                    });
+                    nodeMap.set(nodeId, true);
+                }
+            }
+
+            // 处理节点m
+            if (record._fields[record._fieldLookup.m]) {
+                const nodeData = record._fields[record._fieldLookup.m];
+                const nodeId = nodeData.id || nodeData._id || JSON.stringify(nodeData);
+                const labels = record._fields[record._fieldLookup.m_labels] || ['Node'];
+
+                if (!nodeMap.has(nodeId)) {
+                    nodes.push({
+                        id: nodeId,
+                        type: labels[0],
+                        label: nodeData.name || labels[0],
+                        properties: nodeData
+                    });
+                    nodeMap.set(nodeId, true);
+                }
+            }
+
+            // 处理关系
+            if (record._fields[record._fieldLookup.r]) {
+                const relData = record._fields[record._fieldLookup.r];
+                const sourceNode = record._fields[record._fieldLookup.n];
+                const targetNode = record._fields[record._fieldLookup.m];
+
+                if (sourceNode && targetNode) {
+                    const sourceId = sourceNode.id || sourceNode._id || JSON.stringify(sourceNode);
+                    const targetId = targetNode.id || targetNode._id || JSON.stringify(targetNode);
+
+                    links.push({
+                        source: sourceId,
+                        target: targetId,
+                        type: relData.type || 'RELATED'
+                    });
+                }
+            }
+        });
+
+        return {nodes, links};
+    }
+
+    // 渲染图形
+    function renderGraph(data) {
+        const svg = d3.select('#graph-svg');
+
+        // 清除现有图形
+        svg.selectAll('#zoomable-container *').remove();
+
+        // 创建力导向模拟
+        const simulation = d3.forceSimulation(data.nodes)
+            .force('link', d3.forceLink(data.links).id(d => d.id).distance(config.linkDistance))
+            .force('charge', d3.forceManyBody().strength(config.chargeStrength))
+            .force('center', d3.forceCenter(svg.attr('width') / 2, svg.attr('height') / 2));
+
+        // 创建连线
+        const link = svg.select('#zoomable-container').append('g')
+            .selectAll('line')
+            .data(data.links)
+            .enter().append('line')
+            .attr('class', 'link')
+            .attr('stroke', '#999');
+
+        // 创建节点
+        const node = svg.select('#zoomable-container').append('g')
+            .selectAll('circle')
+            .data(data.nodes)
+            .enter().append('circle')
+            .attr('class', 'node')
+            .attr('r', config.nodeRadius)
+            .attr('fill', d => config.nodeColors[d.type] || '#aaa')
+            .call(d3.drag()
+                .on('start', dragstarted)
+                .on('drag', dragged)
+                .on('end', dragended));
+
+        // 添加节点标签
+        const text = svg.select('#zoomable-container').append('g')
+            .selectAll('text')
+            .data(data.nodes)
+            .enter().append('text')
+            .attr('dy', -15)
+            .text(d => d.label)
+            .attr('font-size', 10);
+
+        // 更新模拟
+        simulation.on('tick', () => {
+            link
+                .attr('x1', d => d.source.x)
+                .attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x)
+                .attr('y2', d => d.target.y);
+
+            node
+                .attr('cx', d => d.x)
+                .attr('cy', d => d.y);
+
+            text
+                .attr('x', d => d.x)
+                .attr('y', d => d.y);
+        });
+
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+    }
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', initGraph);
+</script>
+{% endblock %}

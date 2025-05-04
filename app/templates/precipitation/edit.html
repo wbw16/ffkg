@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-lg mt-4">
+    <div class="card border-info">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h4 class="my-1">
+                <i class="bi bi-pencil-square me-2"></i>
+                编辑降水记录
+                <small class="fs-6 ms-2">ID: {{ record.precipitation_id }}</small>
+            </h4>
+            <span class="badge bg-light text-dark">
+                <i class="bi bi-clock-history me-1"></i>
+                {% if record.editor %}
+                    最后编辑: {{ record.editor.username }} @ {{ record.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                {% else %}
+                    创建时间: {{ record.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+                {% endif %}
+            </span>
+        </div>
+
+        <div class="card-body">
+            <form method="POST" novalidate>
+                {{ form.hidden_tag() }}
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">气象站</label>
+                        <input type="text" class="form-control-plaintext font-monospace"
+                               value="{{ record.station.name }} ({{ record.station.code }})" readonly>
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form.timestamp.label(class="form-label") }}
+                        <div class="input-group">
+                            {{ form.timestamp(class="form-control", value=record.timestamp.strftime('%Y-%m-%dT%H:%M')) }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-4 position-relative">
+                        {{ form.amount.label(class="form-label") }}
+                        <div class="input-group has-validation">
+                            {{ form.amount(
+                                class="form-control",
+                                value="%.1f"|format(record.amount),
+                                **{"aria-describedby": "amount-help"}
+                            ) }}
+                            <span class="input-group-text">mm</span>
+                            {% if form.amount.errors %}
+                            <div class="invalid-tooltip">
+                                {{ form.amount.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div id="amount-help" class="form-text">
+                            原值: {{ "%.1f"|format(record.amount) }}mm
+                        </div>
+                    </div>
+
+                    <div class="col-md-8 align-self-end text-end">
+                        <button type="button" class="btn btn-danger me-2"
+                                data-bs-toggle="modal" data-bs-target="#deleteModal">
+                            <i class="bi bi-trash3 me-1"></i>删除
+                        </button>
+                        <button type="submit" class="btn btn-primary px-4 me-2">
+                            <i class="bi bi-save me-1"></i>保存
+                        </button>
+                        <a href="{{ url_for('precipitation.list_precipitation') }}"
+                           class="btn btn-outline-secondary px-4">
+                            返回
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    确认删除降水记录
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>确定要永久删除这条记录吗？</p>
+                <ul class="list-group mb-3">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>气象站:</span>
+                        <strong>{{ record.station.name }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>记录时间:</span>
+                        <strong>{{ record.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>降水量:</span>
+                        <strong>{{ "%.1f"|format(record.amount) }}mm</strong>
+                    </li>
+                </ul>
+                <p class="text-danger"><small>注意: 此操作无法撤销且会记录操作日志！</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <form action="{{ url_for('precipitation.delete_record', record_id=record.precipitation_id) }}"
+                      method="POST">
+                    <button type="submit" class="btn btn-danger">确认删除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

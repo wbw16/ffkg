@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}监测站列表{% endblock %}
+{% block header %}
+    <h2>水文监测站点</h2>
+    <a href="{{ url_for('monitor.create_monitor') }}" class="btn-add">新建监测站</a>
+{% endblock %}
+
+{% block content %}
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>监测站ID</th>
+                    <th>站点名称</th>
+                    <th>监测类型</th>
+                    <th>关联位置</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for monitor in monitors %}
+                    <tr>
+                        <td>{{ monitor.monitor_id }}</td>
+                        <td>{{ monitor.name }}</td>
+                        <td><span class="type-tag {{ monitor.type|lower }}">{{ monitor.type }}</span></td>
+                        <td>
+                            {% if monitor.river  %}
+                                <span class="relation-info">
+                                    河流: {{ monitor.river .name }}
+                                    <span class="relation-meta">({{ monitor.river .basin .name }})</span>
+                                </span>
+                            {% elif monitor.reservoir  %}
+                                <span class="relation-info">
+                                    水库: {{ monitor.reservoir.name }}
+                                    <span class="relation-meta">({{ monitor.reservoir.river.name }})</span>
+                                </span>
+                            {% else %}
+                                <span class="no-relation">未关联具体位置</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions">
+                            <a href="{{ url_for('monitor.edit_monitor', monitor_id=monitor.monitor_id) }}"
+                               class="btn-edit">编辑</a>
+                            <form action="{{ url_for('monitor.delete_monitor', monitor_id=monitor.monitor_id) }}"
+                                  method="post">
+                                <button type="submit" class="btn-delete">删除</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="no-data">暂无监测站数据</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

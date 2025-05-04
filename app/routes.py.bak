@@ -1,0 +1,414 @@
+from flask import Blueprint, render_template, request, redirect, url_for, flash
+from app.models import (
+    Basin, River, Reservoir,
+    FloodControlFacility, WeatherStation, MonitoringStation
+)
+from app.extensions import db
+from datetime import datetime, timedelta
+
+# ==================== 蓝图注册 ====================
+main_bp= Blueprint('main', __name__)
+basins_bp = Blueprint('basin', __name__, url_prefix='/basins')
+rivers_bp = Blueprint('river', __name__, url_prefix='/rivers')
+reservoirs_bp = Blueprint('reservoir', __name__, url_prefix='/reservoirs')
+facilities_bp = Blueprint('facility', __name__, url_prefix='/facilities')
+stations_bp = Blueprint('station', __name__, url_prefix='/stations')
+monitors_bp = Blueprint('monitor', __name__, url_prefix='/monitors')
+
+
+# ==================== 辅助函数 ====================
+def get_related_objects():
+    """获取关联对象用于表单选择"""
+    return {
+        'basins': Basin.query.all(),
+        'rivers': River.query.all(),
+        'reservoirs': Reservoir.query.all()
+    }
+
+# ==================== 主路由 ====================
+@main_bp.route('/')
+def index():
+    # 获取各类数据统计
+    stats = {
+        'basin_count': Basin.query.count(),
+        'river_count': River.query.count(),
+        'reservoir_count': Reservoir.query.count(),
+        'station_count': WeatherStation.query.count(),
+        'facility_count': FloodControlFacility.query.count(),
+        'monitor_count': MonitoringStation.query.count()
+    }
+
+    # 获取最近添加的数据（假设模型中有created_at字段）
+    recent_data = {
+        'recent_basins': Basin.query.order_by(Basin.created_at.desc()).limit(5).all(),
+        'recent_monitors': MonitoringStation.query.order_by(MonitoringStation.created_at.desc()).limit(5).all()
+    }
+
+    return render_template('index.html', **stats, **recent_data)
+
+# ==================== 流域路由 ====================
+@basins_bp.route('/')
+def list_basins():
+    basins = Basin.query.order_by(Basin.basin_id).all()
+    return render_template('basins/list.html', basins=basins)
+
+
+@basins_bp.route('/create', methods=['GET', 'POST'])
+def create_basin():
+    if request.method == 'POST':
+        try:
+            basin = Basin(
+                basin_id=request.form['basin_id'],
+                name=request.form['name'],
+                area=float(request.form['area']),
+                region=request.form['region']
+            )
+            db.session.add(basin)
+            db.session.commit()
+            flash('流域创建成功', 'success')
+            return redirect(url_for('basin.list_basins'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'创建失败: {str(e)}', 'error')
+    return render_template('basins/create.html')
+
+
+@basins_bp.route('/<int:basin_id>/edit', methods=['GET', 'POST'])
+def edit_basin(basin_id):
+    basin = Basin.query.get_or_404(basin_id)
+    if request.method == 'POST':
+        try:
+            basin.name = request.form['name']
+            basin.area = float(request.form['area'])
+            basin.region = request.form['region']
+            db.session.commit()
+            flash('流域更新成功', 'success')
+            return redirect(url_for('basin.list_basins'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'更新失败: {str(e)}', 'error')
+    return render_template('basins/edit.html', basin=basin)
+
+
+@basins_bp.route('/<int:basin_id>/delete', methods=['POST'])
+def delete_basin(basin_id):
+    basin = Basin.query.get_or_404(basin_id)
+    try:
+        db.session.delete(basin)
+        db.session.commit()
+        flash('流域删除成功', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'删除失败: {str(e)}', 'error')
+    return redirect(url_for('basin.list_basins'))
+
+
+# ==================== 河流路由 ====================
+@rivers_bp.route('/')
+def list_rivers():
+    rivers = River.query.join(Basin).order_by(River.river_id).all()
+    return render_template('rivers/list.html', rivers=rivers)
+
+
+@rivers_bp.route('/create', methods=['GET', 'POST'])
+def create_river():
+    if request.method == 'POST':
+        try:
+            river = River(
+                river_id=request.form['river_id'],
+                name=request.form['name'],
+                length=float(request.form['length']),
+                basin_id=int(request.form['basin_id'])
+            )
+            db.session.add(river)
+            db.session.commit()
+            flash('河流创建成功', 'success')
+            return redirect(url_for('river.list_rivers'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'创建失败: {str(e)}', 'error')
+
+    related = get_related_objects()
+    return render_template('rivers/create.html', **related)
+
+
+@rivers_bp.route('/<int:river_id>/edit', methods=['GET', 'POST'])
+def edit_river(river_id):
+    river = River.query.get_or_404(river_id)
+    if request.method == 'POST':
+        try:
+            river.name = request.form['name']
+            river.length = float(request.form['length'])
+            river.basin_id = int(request.form['basin_id'])
+            db.session.commit()
+            flash('河流更新成功', 'success')
+            return redirect(url_for('river.list_rivers'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'更新失败: {str(e)}', 'error')
+
+    related = get_related_objects()
+    return render_template('rivers/edit.html', river=river, **related)
+
+
+@rivers_bp.route('/<int:river_id>/delete', methods=['POST'])
+def delete_river(river_id):
+    river = River.query.get_or_404(river_id)
+    try:
+        db.session.delete(river)
+        db.session.commit()
+        flash('河流删除成功', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'删除失败: {str(e)}', 'error')
+    return redirect(url_for('river.list_rivers'))
+
+
+# ==================== 水库路由 ====================
+@reservoirs_bp.route('/')
+def list_reservoirs():
+    reservoirs = Reservoir.query.join(River).order_by(Reservoir.reservoir_id).all()
+    return render_template('reservoirs/list.html', reservoirs=reservoirs)
+
+
+@reservoirs_bp.route('/create', methods=['GET', 'POST'])
+def create_reservoir():
+    if request.method == 'POST':
+        try:
+            reservoir = Reservoir(
+                reservoir_id=request.form['reservoir_id'],
+                name=request.form['name'],
+                capacity=float(request.form['capacity']),
+                river_id=int(request.form['river_id'])
+            )
+            db.session.add(reservoir)
+            db.session.commit()
+            flash('水库创建成功', 'success')
+            return redirect(url_for('reservoir.list_reservoirs'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'创建失败: {str(e)}', 'error')
+
+    related = get_related_objects()
+    return render_template('reservoirs/create.html', **related)
+
+
+@reservoirs_bp.route('/<int:reservoir_id>/edit', methods=['GET', 'POST'])
+def edit_reservoir(reservoir_id):
+    reservoir = Reservoir.query.get_or_404(reservoir_id)
+    if request.method == 'POST':
+        try:
+            reservoir.name = request.form['name']
+            reservoir.capacity = float(request.form['capacity'])
+            reservoir.river_id = int(request.form['river_id'])
+            db.session.commit()
+            flash('水库更新成功', 'success')
+            return redirect(url_for('reservoir.list_reservoirs'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'更新失败: {str(e)}', 'error')
+
+    related = get_related_objects()
+    return render_template('reservoirs/edit.html', reservoir=reservoir, **related)
+
+# 在reservoirs_bp蓝图下添加删除路由
+@reservoirs_bp.route('/<int:reservoir_id>/delete', methods=['POST'])
+def delete_reservoir(reservoir_id):
+    reservoir = Reservoir.query.get_or_404(reservoir_id)
+    try:
+        db.session.delete(reservoir)
+        db.session.commit()
+        flash('水库删除成功', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'删除失败: {str(e)}', 'error')
+    return redirect(url_for('reservoir.list_reservoirs'))
+
+# ==================== 防洪设施路由 ====================
+@facilities_bp.route('/')
+def list_facilities():
+    facilities = FloodControlFacility.query.join(River).order_by(FloodControlFacility.facility_id).all()
+    return render_template('facilities/list.html', facilities=facilities)
+
+
+@facilities_bp.route('/create', methods=['GET', 'POST'])
+def create_facility():
+    if request.method == 'POST':
+        try:
+            facility = FloodControlFacility(
+                facility_id=request.form['facility_id'],
+                name=request.form['name'],
+                type=request.form['type'],
+                river_id=int(request.form['river_id'])
+            )
+            db.session.add(facility)
+            db.session.commit()
+            flash('防洪设施创建成功', 'success')
+            return redirect(url_for('facility.list_facilities'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'创建失败: {str(e)}', 'error')
+
+    related = get_related_objects()
+    return render_template('facilities/create.html', **related)
+
+
+# 在facilities_bp蓝图下添加以下路由
+@facilities_bp.route('/<int:facility_id>/edit', methods=['GET', 'POST'])
+def edit_facility(facility_id):
+    facility = FloodControlFacility.query.get_or_404(facility_id)
+    if request.method == 'POST':
+        try:
+            facility.name = request.form['name']
+            facility.type = request.form['type']
+            facility.river_id = int(request.form['river_id'])
+            db.session.commit()
+            flash('防洪设施更新成功', 'success')
+            return redirect(url_for('facility.list_facilities'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'更新失败: {str(e)}', 'error')
+
+    related = get_related_objects()
+    return render_template('facilities/edit.html', facility=facility, **related)
+
+
+@facilities_bp.route('/<int:facility_id>/delete', methods=['POST'])
+def delete_facility(facility_id):
+    facility = FloodControlFacility.query.get_or_404(facility_id)
+    try:
+        db.session.delete(facility)
+        db.session.commit()
+        flash('防洪设施删除成功', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'删除失败: {str(e)}', 'error')
+    return redirect(url_for('facility.list_facilities'))
+
+
+# ==================== 气象站路由 ====================
+@stations_bp.route('/')
+def list_stations():
+    stations = WeatherStation.query.join(Basin).order_by(WeatherStation.station_id).all()
+    return render_template('stations/list.html', stations=stations)
+
+
+@stations_bp.route('/create', methods=['GET', 'POST'])
+def create_station():
+    if request.method == 'POST':
+        try:
+            station = WeatherStation(
+                station_id=request.form['station_id'],
+                name=request.form['name'],
+                latitude=float(request.form['latitude']),
+                longitude=float(request.form['longitude']),
+                basin_id=int(request.form['basin_id'])
+            )
+            db.session.add(station)
+            db.session.commit()
+            flash('气象站创建成功', 'success')
+            return redirect(url_for('station.list_stations'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'创建失败: {str(e)}', 'error')
+
+    related = get_related_objects()
+    return render_template('stations/create.html', **related)
+
+
+# 在stations_bp蓝图下添加编辑和删除路由
+@stations_bp.route('/<int:station_id>/edit', methods=['GET', 'POST'])
+def edit_station(station_id):
+    station = WeatherStation.query.get_or_404(station_id)
+    if request.method == 'POST':
+        try:
+            station.name = request.form['name']
+            station.latitude = float(request.form['latitude'])
+            station.longitude = float(request.form['longitude'])
+            station.basin_id = int(request.form['basin_id'])
+            db.session.commit()
+            flash('气象站更新成功', 'success')
+            return redirect(url_for('station.list_stations'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'更新失败: {str(e)}', 'error')
+
+    related = get_related_objects()
+    return render_template('stations/edit.html', station=station, **related)
+
+
+@stations_bp.route('/<int:station_id>/delete', methods=['POST'])
+def delete_station(station_id):
+    station = WeatherStation.query.get_or_404(station_id)
+    try:
+        db.session.delete(station)
+        db.session.commit()
+        flash('气象站删除成功', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'删除失败: {str(e)}', 'error')
+    return redirect(url_for('station.list_stations'))
+
+
+# ==================== 监测站路由 ====================
+@monitors_bp.route('/')
+def list_monitors():
+    monitors = MonitoringStation.query.outerjoin(River).outerjoin(Reservoir).all()
+    return render_template('monitors/list.html', monitors=monitors)
+
+
+@monitors_bp.route('/create', methods=['GET', 'POST'])
+def create_monitor():
+    if request.method == 'POST':
+        try:
+            monitor = MonitoringStation(
+                monitor_id=request.form['monitor_id'],
+                name=request.form['name'],
+                type=request.form['type'],
+                river_id=int(request.form['river_id']) if request.form['river_id'] else None,
+                reservoir_id=int(request.form['reservoir_id']) if request.form['reservoir_id'] else None
+            )
+            db.session.add(monitor)
+            db.session.commit()
+            flash('监测站创建成功', 'success')
+            return redirect(url_for('monitor.list_monitors'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'创建失败: {str(e)}', 'error')
+
+    related = get_related_objects()
+    return render_template('monitors/create.html', **related)
+
+
+# 在monitors_bp蓝图下添加编辑和删除路由
+@monitors_bp.route('/<int:monitor_id>/edit', methods=['GET', 'POST'])
+def edit_monitor(monitor_id):
+    monitor = MonitoringStation.query.get_or_404(monitor_id)
+    if request.method == 'POST':
+        try:
+            monitor.name = request.form['name']
+            monitor.type = request.form['type']
+            monitor.river_id = int(request.form['river_id']) if request.form['river_id'] else None
+            monitor.reservoir_id = int(request.form['reservoir_id']) if request.form['reservoir_id'] else None
+            db.session.commit()
+            flash('监测站更新成功', 'success')
+            return redirect(url_for('monitor.list_monitors'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'更新失败: {str(e)}', 'error')
+
+    related = get_related_objects()
+    return render_template('monitors/edit.html', monitor=monitor, **related)
+
+
+@monitors_bp.route('/<int:monitor_id>/delete', methods=['POST'])
+def delete_monitor(monitor_id):
+    monitor = MonitoringStation.query.get_or_404(monitor_id)
+    try:
+        db.session.delete(monitor)
+        db.session.commit()
+        flash('监测站删除成功', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'删除失败: {str(e)}', 'error')
+    return redirect(url_for('monitor.list_monitors'))

@@ -1,0 +1,34 @@
+{% macro render_flood_alert_badge(alert, size='normal', show_count=False) %}
+{# 警报级别到Bootstrap颜色的映射 #}
+{% set alert_class = {
+    'red': 'danger',
+    'orange': 'warning',
+    'yellow': 'warning'
+}.get(alert.alert_level, 'secondary') %}
+
+{# 警报级别到中文显示的映射（可选） #}
+{% set alert_text = {
+    'red': '红色警报',
+    'orange': '橙色警报',
+    'yellow': '黄色警报'
+}.get(alert.alert_level, '未知警报') %}
+
+<span class="badge rounded-pill bg-{{ alert_class }}
+            {% if size == 'small' %}badge-sm{% endif %}"
+      data-bs-toggle="tooltip"
+      title="{{ alert.description|default('暂无详细描述', true)|truncate(50) }}">
+    {# 可选的图标（根据实际需求启用） #}
+    {% if alert.alert_level == 'red' %}
+    <i class="fas fa-exclamation-triangle me-1"></i>
+    {% elif alert.alert_level == 'orange' %}
+    <i class="fas fa-exclamation-circle me-1"></i>
+    {% endif %}
+
+    {{ alert_text }}
+
+    {# 可选的数量显示（需要模型支持） #}
+    {% if show_count and alert.count and alert.count > 1 %}
+    <span class="badge bg-light text-dark ms-1">{{ alert.count }}</span>
+    {% endif %}
+</span>
+{% endmacro %}

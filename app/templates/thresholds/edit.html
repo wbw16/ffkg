@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-lg mt-4">
+    <div class="card border-primary">
+        <div class="card-header bg-primary text-white d-flex justify-content-between">
+            <h4 class="mb-0">
+                <i class="bi bi-pencil-square me-2"></i>
+                编辑{{ model_name }}阈值 #{{ threshold.threshold_id }}
+            </h4>
+            <span class="badge bg-light text-dark">
+                创建于 {{ threshold.created_at.strftime('%Y-%m-%d') }}
+            </span>
+        </div>
+
+        <div class="card-body">
+            <form method="POST" id="editThresholdForm">
+                {{ form.hidden_tag() }}
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header py-2 bg-light">
+                                <i class="bi bi-sliders me-2"></i>阈值参数
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    {{ form.threshold_value.label(class="form-label fw-bold") }}
+                                    <div class="input-group">
+                                        {{ form.threshold_value(
+                                            class="form-control",
+                                            value="%.3f"|format(threshold.threshold_value)
+                                        ) }}
+                                    </div>
+                                    <div class="d-flex justify-content-between mt-1">
+                                        <small class="text-muted">
+                                            原值: {{ "%.3f"|format(threshold.threshold_value) }}
+                                        </small>
+                                        <small class="text-muted">
+                                            差值: <span id="valueDiff">0.000</span>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header py-2 bg-light">
+                                <i class="bi bi-card-text me-2"></i>配置信息
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    {{ form.description.label(class="form-label fw-bold") }}
+                                    {{ form.description(class="form-control", rows=5) }}
+                                    <small class="text-muted">
+                                        原内容: {{ threshold.description|default('暂无描述', true) }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between border-top pt-3">
+                    <button type="button" class="btn btn-danger"
+                            data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="bi bi-trash3 me-1"></i> 删除配置
+                    </button>
+                    <div>
+                        <a href="{{ url_for('threshold.list_thresholds') }}"
+                           class="btn btn-secondary me-2">
+                            <i class="bi bi-x-circle me-1"></i> 取消
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i> 保存更改
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    确认删除阈值配置
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-octagon me-2"></i>
+                    您正在删除<strong>{{ model_name }}</strong>的关键阈值配置
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="text-muted small">阈值数值</div>
+                                <div class="h4">
+                                    {{ "%.3f"|format(threshold.threshold_value) }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="text-muted small">生效时间</div>
+                                <div class="h6">
+                                    {{ threshold.created_at.strftime('%Y-%m-%d') }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-info-circle me-2"></i>
+                    删除后相关监测系统将使用默认阈值
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i> 取消
+                </button>
+                <form action="{{ url_for('threshold.delete_threshold', threshold_id=threshold.threshold_id) }}"
+                      method="POST">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash-fill me-1"></i> 确认删除
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 实时计算数值差值
+document.getElementById('threshold_value').addEventListener('input', function() {
+    const original = {{ threshold.threshold_value }};
+    const current = parseFloat(this.value) || 0;
+    const diff = (current - original).toFixed(3);
+    const diffElement = document.getElementById('valueDiff');
+
+    diffElement.textContent = diff;
+    diffElement.className = diff >= 0 ? 'text-danger' : 'text-success';
+});
+</script>
+{% endblock %}

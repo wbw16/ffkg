@@ -1,0 +1,27 @@
+tool/
+# 依赖目录
+node_modules/
+vendor/
+app/static/js/
+# 构建输出
+dist/
+build/
+*.exe
+*.dll
+
+# 开发环境文件
+.env
+.env.local
+.env.development
+.env.test
+
+# 日志文件
+*.log
+logs/
+
+# 编辑器目录和文件
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store

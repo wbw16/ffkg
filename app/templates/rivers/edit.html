@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}编辑河流 - {{ river.name }}{% endblock %}
+{% block header %}<h2>编辑河流 - {{ river.name }}</h2>{% endblock %}
+
+{% block content %}
+    <form method="post" class="data-form">
+        <div class="form-group">
+            <label for="river_id">河流ID:</label>
+            <input type="text" id="river_id" value="{{ river.river_id }}" disabled>
+        </div>
+
+        <div class="form-group">
+            <label for="name">河流名称:</label>
+            <input type="text" id="name" name="name" value="{{ river.name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="length">河流长度(km):</label>
+            <input type="number" id="length" name="length" value="{{ river.length }}" step="0.01" min="0" required>
+        </div>
+
+        <div class="form-group">
+            <label for="basin_id">所属流域:</label>
+            <select id="basin_id" name="basin_id" required>
+                {% for basin in basins %}
+                    <option value="{{ basin.basin_id }}" {% if basin.basin_id == river.basin_id %}selected{% endif %}>{{ basin.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">更新</button>
+            <a href="{{ url_for('river.list_rivers') }}" class="btn-cancel">返回</a>
+        </div>
+    </form>
+{% endblock %}

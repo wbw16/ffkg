@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}创建新流域{% endblock %}
+{% block header %}<h2>创建新流域</h2>{% endblock %}
+
+{% block content %}
+    <form method="post" class="data-form">
+        <div class="form-group">
+            <label for="basin_id">流域ID:</label>
+            <input type="number" id="basin_id" name="basin_id" required>
+        </div>
+
+        <div class="form-group">
+            <label for="name">流域名称:</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="area">流域面积(km²):</label>
+            <input type="number" id="area" name="area" step="0.01" min="0" required>
+        </div>
+
+        <div class="form-group">
+            <label for="region">所在区域:</label>
+            <input type="text" id="region" name="region" required>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">保存</button>
+            <a href="{{ url_for('basin.list_basins') }}" class="btn-cancel">取消</a>
+        </div>
+    </form>
+{% endblock %}

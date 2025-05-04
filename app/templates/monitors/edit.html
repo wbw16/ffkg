@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}编辑监测站 - {{ monitor.name }}{% endblock %}
+{% block header %}<h2>编辑监测站 - {{ monitor.name }}</h2>{% endblock %}
+
+{% block content %}
+    <form method="post" class="data-form" id="monitor-form">
+        <div class="readonly-field">
+            <span class="detail-label">监测站ID:</span>
+            <span class="detail-value">{{ monitor.monitor_id }}</span>
+        </div>
+
+        <div class="form-group">
+            <label for="name">监测站名称:</label>
+            <input type="text" id="name" name="name" value="{{ monitor.name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="type">监测类型:</label>
+            <select id="type" name="type" required>
+                <option value="水质监测" {% if monitor.type == '水质监测' %}selected{% endif %}>水质监测</option>
+                <option value="流量监测" {% if monitor.type == '流量监测' %}selected{% endif %}>流量监测</option>
+                <option value="雨量监测" {% if monitor.type == '雨量监测' %}selected{% endif %}>雨量监测</option>
+                <option value="水位监测" {% if monitor.type == '水位监测' %}selected{% endif %}>水位监测</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>当前关联:</label>
+            <div class="current-relation">
+                {% if monitor.river %}
+                    <span class="relation-type">河流:</span>
+                    <span class="relation-name">{{ monitor.river.name }}</span>
+                    <span class="relation-meta">({{ monitor.river.basin.name }}流域)</span>
+                {% elif monitor.reservoir %}
+                    <span class="relation-type">水库:</span>
+                    <span class="relation-name">{{ monitor.reservoir.name }}</span>
+                    <span class="relation-meta">({{ monitor.reservoir.river.name }}河流)</span>
+                {% else %}
+                    <span class="no-relation">未关联具体位置</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>修改关联:</label>
+            <div class="radio-group">
+                <label>
+                    <input type="radio" name="location_type" value="river"
+                           {% if monitor.river_id %}checked{% endif %}> 关联河流
+                </label>
+                <label>
+                    <input type="radio" name="location_type" value="reservoir"
+                           {% if monitor.reservoir_id %}checked{% endif %}> 关联水库
+                </label>
+                <label>
+                    <input type="radio" name="location_type" value="none"
+                           {% if not monitor.river_id and not monitor.reservoir_id %}checked{% endif %}> 不关联
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group location-select" id="river-select"
+             style="display:{% if monitor.river_id %}block{% else %}none{% endif %}">
+            <label for="river_id">选择河流:</label>
+            <select id="river_id" name="river_id">
+                <option value="">-- 选择河流 --</option>
+                {% for river in rivers %}
+                    <option value="{{ river.river_id }}"
+                            {% if river.river_id == monitor.river_id %}selected{% endif %}>
+                        {{ river.name }} ({{ river.basin.name }}流域)
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group location-select" id="reservoir-select"
+             style="display:{% if monitor.reservoir_id %}block{% else %}none{% endif %}">
+            <label for="reservoir_id">选择水库:</label>
+            <select id="reservoir_id" name="reservoir_id">
+                <option value="">-- 选择水库 --</option>
+                {% for reservoir in reservoirs %}
+                    <option value="{{ reservoir.reservoir_id }}"
+                            {% if reservoir.reservoir_id == monitor.reservoir_id %}selected{% endif %}>
+                        {{ reservoir.name }} ({{ reservoir.river.name }}河流)
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">更新</button>
+            <a href="{{ url_for('monitor.list_monitors') }}" class="btn-cancel">返回</a>
+        </div>
+    </form>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const locationTypeRadios = document.querySelectorAll('input[name="location_type"]');
+        const riverSelect = document.getElementById('river-select');
+        const reservoirSelect = document.getElementById('reservoir-select');
+
+        locationTypeRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'river') {
+                    riverSelect.style.display = 'block';
+                    reservoirSelect.style.display = 'none';
+                    document.getElementById('reservoir_id').value = '';
+                } else if (this.value === 'reservoir') {
+                    riverSelect.style.display = 'none';
+                    reservoirSelect.style.display = 'block';
+                    document.getElementById('river_id').value = '';
+                } else {
+                    riverSelect.style.display = 'none';
+                    reservoirSelect.style.display = 'none';
+                    document.getElementById('river_id').value = '';
+                    document.getElementById('reservoir_id').value = '';
+                }
+            });
+        });
+    });
+    </script>
+{% endblock %}

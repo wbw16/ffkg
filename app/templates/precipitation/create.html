@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-lg mt-4">
+    <div class="card border-primary">
+        <div class="card-header bg-primary text-white">
+            <h4 class="my-1">
+                <i class="bi bi-cloud-rain me-2"></i>新建降水记录
+                <small class="float-end fs-6">带<span class="text-warning">*</span>为必填项</small>
+            </h4>
+        </div>
+
+        <div class="card-body">
+            <form method="POST" novalidate class="needs-validation">
+                {{ form.hidden_tag() }}
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        {{ form.station_id.label(class="form-label") }}
+                        <span class="text-danger">*</span>
+                        {{ form.station_id(class="form-select") }}
+                        <div class="invalid-feedback">
+                            请选择气象站
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form.timestamp.label(class="form-label") }}
+                        <div class="input-group">
+                            {{ form.timestamp(class="form-control", placeholder="YYYY-MM-DD HH:MM") }}
+                            <button class="btn btn-outline-secondary" type="button"
+                                onclick="document.getElementById('timestamp').value = new Date().toISOString().slice(0, 16)">
+                                现在
+                            </button>
+                        </div>
+                        <small class="text-muted">不填写默认为当前时间</small>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        {{ form.amount.label(class="form-label") }}
+                        <span class="text-danger">*</span>
+                        <div class="input-group">
+                            {{ form.amount(class="form-control", placeholder="0.0", step="0.1") }}
+                            <span class="input-group-text">mm</span>
+                        </div>
+                        <div class="invalid-feedback">
+                            请输入有效的降水量(0-1000mm)
+                        </div>
+                    </div>
+
+                    <div class="col-md-8 align-self-end text-end">
+                        <button type="submit" class="btn btn-primary px-4 me-2">
+                            <i class="bi bi-check-circle me-1"></i>提交
+                        </button>
+                        <a href="{{ url_for('precipitation.list_precipitation') }}"
+                           class="btn btn-outline-secondary px-4">
+                            取消
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// 客户端验证增强
+(function() {
+    'use strict';
+    const forms = document.querySelectorAll('.needs-validation');
+
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            form.classList.add('was-validated');
+        }, false);
+    });
+})();
+</script>
+{% endblock %}

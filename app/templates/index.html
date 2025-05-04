@@ -1,0 +1,879 @@
+{% extends "base.html" %}
+
+{% block title %}水利知识平台{% endblock %}
+
+{% block content %}
+
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+<style>
+    :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #3498db;
+        --accent-color: #1abc9c;
+        --light-gray: #f8f9fa;
+        --dark-gray: #343a40;
+        --text-color: #2c3e50;
+        --text-light: #7f8c8d;
+    }
+
+    body {
+        font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        background-color: #f5f7fa;
+        color: var(--text-color);
+        line-height: 1.6;
+    }
+
+    .dashboard {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    /* 欢迎横幅 */
+    .welcome-banner {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        color: var(--text-color);
+        border-radius: 12px;
+        padding: 40px;
+        margin-bottom: 30px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .welcome-banner::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 70%);
+        transform: rotate(30deg);
+    }
+
+    .welcome-content h1 {
+        color: var(--primary-color);
+        font-size: 2.8rem;
+        font-weight: 300;
+        margin-bottom: 10px;
+    }
+
+    .welcome-content .subtitle {
+        color: var(--text-light);
+        font-size: 1.3rem;
+        opacity: 0.9;
+        font-weight: 300;
+    }
+
+
+/* 折叠按钮样式 */
+.toggle-results-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 15px;
+    padding: 8px 15px;
+    background-color: #a0a0a0;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.toggle-results-btn:hover {
+    background-color: #e0e0e0;
+}
+
+.toggle-results-btn i {
+    transition: transform 0.3s ease;
+}
+
+/* 默认隐藏搜索结果 */
+.search-results {
+    display: none; /* 初始状态：隐藏 */
+    margin-top: 10px;
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    max-height: 500px;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+/* 展开状态 */
+.search-results.visible {
+    display: block; /* 显示 */
+}
+
+.search-container {
+    width: 90%;
+    max-width: 900px;
+    margin: 20px auto 0;
+    position: relative;
+}
+
+.search-bar {
+    display: flex;
+    width: 100%;
+    gap: 12px;
+    position: relative;
+}
+
+.search-bar input {
+    flex-grow: 1;
+    padding: 12px 15px;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+.search-bar button {
+    padding: 0 25px;
+    border-radius: 8px;
+    background-color: var(--accent-color);
+    border: none;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+}
+    /* 搜索栏 */
+
+
+    .search-bar input:focus {
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+        outline: none;
+    }
+
+
+
+    .search-bar button:hover {
+        background-color: #16a085;
+        transform: translateY(-2px);
+    }
+
+    .search-results {
+        margin-top: 20px;
+        background: white;
+        border-radius: 8px;
+        padding: 25px;
+        color: var(--text-color);
+        max-height: 500px;
+        min-height: 0px;
+        overflow-y: auto;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        font-size: 15px;
+        line-height: 1.6;
+        position: relative; /* 确保不会覆盖按钮 */
+        z-index: 1; /* 确保结果框在按钮下方 */
+    }
+
+
+    /* 统计卡片 */
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .stats-cards .card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .stats-cards .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    .stats-cards .card h3 {
+        font-size: 1.1rem;
+        color: var(--text-light);
+        margin-bottom: 15px;
+        font-weight: 500;
+    }
+
+    .stats-cards .card h3 a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .stats-cards .card .stat {
+        font-size: 2.5rem;
+        font-weight: 300;
+        color: var(--secondary-color);
+        margin-bottom: 5px;
+    }
+
+    .stats-cards .card p {
+        color: var(--text-light);
+        font-size: 0.9rem;
+    }
+
+    /* 知识图谱部分 */
+    .knowledge-graph-section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        margin-bottom: 30px;
+        overflow: hidden;
+    }
+
+    .graph-header {
+        padding: 20px 25px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .graph-header h2 {
+        font-weight: 300;
+        color: var(--primary-color);
+        margin-bottom: 5px;
+    }
+
+    .graph-header p {
+        color: var(--text-light);
+        font-size: 0.95rem;
+    }
+
+    #graph-container {
+        height: 500px;
+        width: 100%;
+        background: #f9fbfd;
+    }
+
+    /* 快速操作 */
+    .quick-actions {
+        margin-bottom: 30px;
+    }
+
+    .quick-actions h2 {
+        font-weight: 300;
+        color: var(--primary-color);
+        margin-bottom: 20px;
+        font-size: 1.8rem;
+    }
+
+    .action-buttons {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+    }
+
+    .action-btn {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: var(--text-color);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        color: var(--secondary-color);
+    }
+
+    .action-btn .icon {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+
+    .action-btn span {
+        font-size: 1rem;
+        font-weight: 500;
+    }
+
+    /* 最近添加 */
+    .recent-added {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    }
+
+    .recent-added h2 {
+        font-weight: 300;
+        color: var(--primary-color);
+        margin-bottom: 20px;
+        font-size: 1.8rem;
+    }
+
+    .recent-items {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 30px;
+    }
+
+    .recent-column h4 {
+        font-weight: 400;
+        color: var(--text-color);
+        margin-bottom: 15px;
+        font-size: 1.2rem;
+    }
+
+    .recent-column ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .recent-column li {
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .recent-column li:last-child {
+        border-bottom: none;
+    }
+
+    .recent-column a {
+        color: var(--secondary-color);
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .recent-column a:hover {
+        color: var(--primary-color);
+        text-decoration: underline;
+    }
+
+    .recent-time {
+        color: var(--text-light);
+        font-size: 0.85rem;
+    }
+
+    .no-data {
+        color: var(--text-light);
+        font-style: italic;
+    }
+
+    /* 响应式调整 */
+    @media (max-width: 768px) {
+        .welcome-content h1 {
+            font-size: 2rem;
+        }
+
+        .welcome-content .subtitle {
+            font-size: 1.1rem;
+        }
+
+        .search-bar {
+            flex-direction: column;
+        }
+
+        .search-bar button {
+            width: 100%;
+            padding: 12px;
+        }
+
+        .action-buttons {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+<div class="dashboard">
+    <!-- 欢迎横幅和搜索 -->
+<div class="dashboard">
+    <section class="welcome-banner">
+        <div class="welcome-content">
+            <h1>水利知识管理平台</h1>
+            <p class="subtitle">一体化水利设施数据管理与分析系统</p>
+        </div>
+
+        <div class="search-container">
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="搜索流域、河流、水库等..." class="form-control">
+                <button onclick="searchEntities()" class="btn">
+                    <i class="bi bi-search"></i> 搜索
+                </button>
+            </div>
+
+            <!-- 将折叠按钮单独放在一个容器中 -->
+            <div class="toggle-results-container">
+                <button id="toggleResults" class="toggle-results-btn">
+                    <span>显示搜索结果</span>
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
+
+            <div id="searchResults" class="search-results"></div>
+        </div>
+    </section>
+</div>
+
+
+    <!-- 统计卡片 -->
+    <div class="stats-cards">
+        <div class="card">
+            <h3><a href="{{ url_for('basin.list_basins') }}">流域数据</a></h3>
+            <div class="stat">{{ basin_count }}</div>
+            <p>登记流域数量</p>
+        </div>
+
+        <div class="card">
+            <h3><a href="{{ url_for('river.list_rivers') }}">河流数据</a></h3>
+            <div class="stat">{{ river_count }}</div>
+            <p>监测河流数量</p>
+        </div>
+
+        <div class="card">
+            <h3><a href="{{ url_for('reservoir.list_reservoirs') }}">水库数据</a></h3>
+            <div class="stat">{{ reservoir_count }}</div>
+            <p>管理水库数量</p>
+        </div>
+
+        <div class="card">
+            <h3><a href="{{ url_for('station.list_stations') }}">气象监测</a></h3>
+            <div class="stat">{{ station_count }}</div>
+            <p>气象站点数量</p>
+        </div>
+    </div>
+
+    <!-- 知识图谱部分 -->
+    <section class="knowledge-graph-section">
+        <div class="graph-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2><i class="bi bi-diagram-3"></i> 水利知识图谱</h2>
+                    <p>可视化展示水利设施关联关系</p>
+                </div>
+                <a href="{{ url_for('main.knowledge_graph') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-right-circle"></i> 查看完整图谱
+                </a>
+            </div>
+        </div>
+        <div id="graph-container">
+            <div id="graph-loading">正在加载知识图谱...</div>
+            <svg id="graph-svg">
+                <g id="zoomable-container"></g>
+            </svg>
+        </div>
+    </section>
+
+    <!-- 快速操作 -->
+    <section class="quick-actions">
+        <h2>快速操作</h2>
+        <div class="action-buttons">
+            <a href="{{ url_for('basin.create_basin') }}" class="action-btn">
+                <i class="bi bi-water"></i>
+                <span>新增流域</span>
+            </a>
+            <a href="{{ url_for('river.create_river') }}" class="action-btn">
+                <i class="bi bi-droplet"></i>
+                <span>登记河流</span>
+            </a>
+            <a href="{{ url_for('monitor.create_monitor') }}" class="action-btn">
+                <i class="bi bi-graph-up"></i>
+                <span>添加监测站</span>
+            </a>
+            <a href="{{ url_for('facility.create_facility') }}" class="action-btn">
+                <i class="bi bi-shield-check"></i>
+                <span>记录防洪设施</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- 最近添加 -->
+    <section class="recent-added">
+        <h2>最近添加</h2>
+        <div class="recent-items">
+            <div class="recent-column">
+                <h4><i class="bi bi-plus-circle"></i> 最新流域</h4>
+                {% if recent_basins %}
+                <ul>
+                    {% for basin in recent_basins %}
+                    <li>
+                        <a href="{{ url_for('basin.edit_basin', basin_id=basin.basin_id) }}">
+                            {{ basin.name }} ({{ basin.region }})
+                        </a>
+                        <span class="recent-time">{{ basin.created_at.strftime('%Y-%m-%d') if basin.created_at else '' }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="no-data">暂无流域数据</p>
+                {% endif %}
+            </div>
+
+            <div class="recent-column">
+                <h4><i class="bi bi-plus-circle"></i> 最新监测站</h4>
+                {% if recent_monitors %}
+                <ul>
+                    {% for monitor in recent_monitors %}
+                    <li>
+                        <a href="{{ url_for('monitor.edit_monitor', monitor_id=monitor.monitor_id) }}">
+                            {{ monitor.name }} ({{ monitor.type }})
+                        </a>
+                        <span class="recent-time">{{ monitor.created_at.strftime('%Y-%m-%d') if monitor.created_at else '' }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="no-data">暂无监测站数据</p>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+
+<script>
+    // 配置对象
+    const config = {
+        nodeRadius: 12,
+        linkDistance: 120,
+        chargeStrength: -150,
+        nodeColors: {
+            "River": "#1f77b4",
+            "Basin": "#ff7f0e",
+            "Reservoir": "#2ca02c",
+            "FloodControlFacility": "#d62728",
+            "WeatherStation": "#9467bd",
+            "MonitoringStation": "#8c564b"
+        }
+    };
+
+    function searchEntities() {
+        const searchTerm = document.getElementById('searchInput').value.trim();
+        if (!searchTerm) {
+            showAlert('请输入搜索内容', 'warning');
+            return;
+        }
+
+        showLoading('searchResults', '正在搜索...');
+
+        fetch(`/neo4j/search_entities?q=${encodeURIComponent(searchTerm)}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('搜索失败');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const resultsContainer = document.getElementById('searchResults');
+                resultsContainer.innerHTML = '';
+
+                if (data.error) {
+                    showAlert(data.error, 'danger', 'searchResults');
+                    return;
+                }
+
+                if (!data.results || data.results.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div class="no-results">
+                            <i class="fas fa-search fa-2x mb-3"></i>
+                            <p>没有找到匹配的结果</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                data.results.forEach(result => {
+                    const item = document.createElement('div');
+                    item.className = 'result-item';
+
+                    const title = document.createElement('div');
+                    title.className = 'd-flex justify-content-between align-items-center mb-2';
+
+                    const name = document.createElement('h5');
+                    name.className = 'mb-0';
+                    name.textContent = result.properties.name || '未命名实体';
+
+                    const type = document.createElement('span');
+                    type.className = 'badge';
+                    type.textContent = result.type;
+
+                    title.appendChild(name);
+                    title.appendChild(type);
+
+                    const details = document.createElement('div');
+                    details.className = 'text-muted small';
+
+                    let idField = '';
+                    if (result.type === 'Basin') idField = 'basin_id';
+                    else if (result.type === 'River') idField = 'river_id';
+                    else if (result.type === 'Reservoir') idField = 'reservoir_id';
+                    else if (result.type === 'FloodControlFacility') idField = 'facility_id';
+                    else if (result.type === 'WeatherStation') idField = 'station_id';
+                    else if (result.type === 'MonitoringStation') idField = 'monitor_id';
+
+                    details.textContent = `ID: ${result.properties[idField]} | 匹配度: ${Math.round(result.score * 100)}%`;
+
+                    item.appendChild(title);
+                    item.appendChild(details);
+                    resultsContainer.appendChild(item);
+                });
+            })
+            .catch(error => {
+                console.error('搜索错误:', error);
+                showAlert(`搜索过程中发生错误: ${error.message}`, 'danger', 'searchResults');
+            });
+        searchResults.classList.add("visible");
+        toggleBtn.innerHTML = `<span>隐藏结果</span> <i class="bi bi-chevron-up"></i>`;
+        isResultsVisible = true;
+    }
+
+    // 显示加载状态
+    function showLoading(containerId, message) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">加载中...</span>
+                </div>
+                <p class="mt-2">${message}</p>
+            </div>
+        `;
+    }
+
+    // 显示提示信息
+    function showAlert(message, type, containerId = null) {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show`;
+        alert.role = 'alert';
+        alert.innerHTML = `
+            ${message}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        `;
+
+        if (containerId) {
+            document.getElementById(containerId).innerHTML = '';
+            document.getElementById(containerId).appendChild(alert);
+        } else {
+            document.body.appendChild(alert);
+        }
+    }
+
+    // 初始化图形
+    function initGraph() {
+        const container = document.getElementById('graph-container');
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+
+        const svg = d3.select('#graph-svg')
+            .attr('width', width)
+            .attr('height', height);
+
+        // 添加缩放行为
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 8])
+            .on('zoom', (event) => {
+                d3.select('#zoomable-container').attr('transform', event.transform);
+            });
+        svg.call(zoom);
+
+        // 执行默认查询
+        executeDefaultQuery();
+    }
+
+    // 执行默认查询
+    async function executeDefaultQuery() {
+        const loadingEl = document.getElementById('graph-loading');
+        try {
+            loadingEl.style.display = 'block';
+
+            const response = await axios.post('/neo4j/query', {
+                query: "MATCH (n)-[r]->(m) RETURN n, labels(n) as n_labels, r, m, labels(m) as m_labels",
+                parameters: {}
+            });
+
+            const data = transformData(response.data);
+            renderGraph(data);
+
+        } catch (error) {
+            console.error('加载知识图谱失败:', error);
+            loadingEl.textContent = '加载失败: ' + (error.response?.data?.error || error.message);
+        } finally {
+            loadingEl.style.display = 'none';
+        }
+    }
+
+    // 数据转换
+    function transformData(neo4jData) {
+        const nodes = [];
+        const links = [];
+        const nodeMap = new Map();
+
+        neo4jData.data.forEach(record => {
+            // 处理节点n
+            if (record._fields[0]) {
+                const nodeData = record._fields[0];
+                const nodeId = nodeData.id || nodeData._id || JSON.stringify(nodeData);
+                const labels = record._fields[record._fieldLookup.n_labels] || ['Node'];
+
+                if (!nodeMap.has(nodeId)) {
+                    nodes.push({
+                        id: nodeId,
+                        type: labels[0],
+                        label: nodeData.name || labels[0],
+                        properties: nodeData
+                    });
+                    nodeMap.set(nodeId, true);
+                }
+            }
+
+            // 处理节点m
+            if (record._fields[record._fieldLookup.m]) {
+                const nodeData = record._fields[record._fieldLookup.m];
+                const nodeId = nodeData.id || nodeData._id || JSON.stringify(nodeData);
+                const labels = record._fields[record._fieldLookup.m_labels] || ['Node'];
+
+                if (!nodeMap.has(nodeId)) {
+                    nodes.push({
+                        id: nodeId,
+                        type: labels[0],
+                        label: nodeData.name || labels[0],
+                        properties: nodeData
+                    });
+                    nodeMap.set(nodeId, true);
+                }
+            }
+
+            // 处理关系
+            if (record._fields[record._fieldLookup.r]) {
+                const relData = record._fields[record._fieldLookup.r];
+                const sourceNode = record._fields[record._fieldLookup.n];
+                const targetNode = record._fields[record._fieldLookup.m];
+
+                if (sourceNode && targetNode) {
+                    const sourceId = sourceNode.id || sourceNode._id || JSON.stringify(sourceNode);
+                    const targetId = targetNode.id || targetNode._id || JSON.stringify(targetNode);
+
+                    links.push({
+                        source: sourceId,
+                        target: targetId,
+                        type: relData.type || 'RELATED'
+                    });
+                }
+            }
+        });
+
+        return {nodes, links};
+    }
+
+    // 渲染图形
+    function renderGraph(data) {
+        const svg = d3.select('#graph-svg');
+
+        // 清除现有图形
+        svg.selectAll('#zoomable-container *').remove();
+
+        // 创建力导向模拟
+        const simulation = d3.forceSimulation(data.nodes)
+            .force('link', d3.forceLink(data.links).id(d => d.id).distance(config.linkDistance))
+            .force('charge', d3.forceManyBody().strength(config.chargeStrength))
+            .force('center', d3.forceCenter(svg.attr('width') / 2, svg.attr('height') / 2));
+
+        // 创建连线
+        const link = svg.select('#zoomable-container').append('g')
+            .selectAll('line')
+            .data(data.links)
+            .enter().append('line')
+            .attr('class', 'link')
+            .attr('stroke', '#999');
+
+        // 创建节点
+        const node = svg.select('#zoomable-container').append('g')
+            .selectAll('circle')
+            .data(data.nodes)
+            .enter().append('circle')
+            .attr('class', 'node')
+            .attr('r', config.nodeRadius)
+            .attr('fill', d => config.nodeColors[d.type] || '#aaa')
+            .call(d3.drag()
+                .on('start', dragstarted)
+                .on('drag', dragged)
+                .on('end', dragended));
+
+        // 添加节点标签
+        const text = svg.select('#zoomable-container').append('g')
+            .selectAll('text')
+            .data(data.nodes)
+            .enter().append('text')
+            .attr('dy', -15)
+            .text(d => d.label)
+            .attr('font-size', 10);
+
+        // 更新模拟
+        simulation.on('tick', () => {
+            link
+                .attr('x1', d => d.source.x)
+                .attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x)
+                .attr('y2', d => d.target.y);
+
+            node
+                .attr('cx', d => d.x)
+                .attr('cy', d => d.y);
+
+            text
+                .attr('x', d => d.x)
+                .attr('y', d => d.y);
+        });
+
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+    }
+
+    // 获取元素
+    const toggleBtn = document.getElementById("toggleResults");
+    const searchResults = document.getElementById("searchResults");
+
+    // 初始状态
+    let isResultsVisible = false;
+
+    // 点击按钮切换显示/隐藏
+    toggleBtn.addEventListener("click", () => {
+        isResultsVisible = !isResultsVisible; // 切换状态
+
+        if (isResultsVisible) {
+            searchResults.classList.add("visible"); // 显示
+            toggleBtn.innerHTML = `<span>隐藏结果</span> <i class="bi bi-chevron-up"></i>`;
+        } else {
+            searchResults.classList.remove("visible"); // 隐藏
+            toggleBtn.innerHTML = `<span>显示结果</span> <i class="bi bi-chevron-down"></i>`;
+        }
+    });
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', initGraph);
+</script>
+{% endblock %}

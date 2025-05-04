@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}新建水库{% endblock %}
+{% block header %}<h2>新建水库</h2>{% endblock %}
+
+{% block content %}
+    <form method="post" class="data-form">
+        <div class="form-group">
+            <label for="reservoir_id">水库ID:</label>
+            <input type="number" id="reservoir_id" name="reservoir_id" required>
+        </div>
+
+        <div class="form-group">
+            <label for="name">水库名称:</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="capacity">总库容(万m³):</label>
+            <input type="number" id="capacity" name="capacity" step="0.01" min="0" required>
+        </div>
+
+        <div class="form-group">
+            <label for="river_id">所在河流:</label>
+            <select id="river_id" name="river_id" required>
+                <option value="">-- 选择河流 --</option>
+                {% for river in rivers %}
+                    <option value="{{ river.river_id }}">
+                        {{ river.name }} (流域: {{ river.basin.name }})
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">保存</button>
+            <a href="{{ url_for('reservoir.list_reservoirs') }}" class="btn-cancel">取消</a>
+        </div>
+    </form>
+{% endblock %}

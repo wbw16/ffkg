@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% from "_macros.html" import render_contact_field, render_alert_badge %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card border-warning shadow-lg">
+        <!-- 卡片头部 -->
+        <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-0">
+                    <i class="bi bi-pencil-square me-2"></i>
+                    编辑防洪预案 #{{ strategy.strategy_id }}
+                    <span class="badge bg-light text-dark ms-2">
+                        {{ strategy.river.name }}
+                    </span>
+                </h4>
+            </div>
+            <div>
+                {{ render_alert_badge(strategy.alert_level) }}
+                <span class="badge bg-white text-dark ms-2">
+                    版本 {{ strategy.created_at.strftime('%Y%m%d') }}
+                </span>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <form method="POST" id="editStrategyForm">
+                {{ form.hidden_tag() }}
+
+                <!-- 基本信息区 -->
+                <div class="row mb-4">
+                    <!-- 河流信息 -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-light py-2">
+                                <i class="bi bi-info-circle me-2"></i>河流信息
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">关联河流</label>
+                                    <div class="p-2 bg-light rounded">
+                                        <h5 class="mb-1">{{ strategy.river.name }}</h5>
+                                        <div class="text-muted small">
+                                            所属流域：{{ strategy.river.basin.name }} |
+                                            河流长度：{{ "%.1f"|format(strategy.river.length) }}km
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    {{ form.alert_level.label(class="form-label fw-bold") }}
+                                    {{ form.alert_level(class="form-select") }}
+                                    <small class="text-muted">
+                                        当前级别: <span class="badge bg-{{ strategy.alert_level }}">
+                                            {{ strategy.alert_level_label }}
+                                        </span>
+                                    </small>
+                                    {% for error in form.alert_level.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 联系人信息 -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-light py-2">
+                                <i class="bi bi-person-lines-fill me-2"></i>应急联系人
+                                <span class="badge bg-info ms-2">最多3人</span>
+                            </div>
+                            <div class="card-body">
+                                {% for i in range(1, 4) %}
+                                <div class="mb-3 border-bottom pb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="fw-bold mb-0">联系人 {{ i }}</h6>
+                                        {% if loop.first %}
+                                        <span class="badge bg-primary">必填</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <input type="text" name="contact_name_{{ i }}"
+                                                   class="form-control" placeholder="姓名"
+                                                   value="{{ contacts[i-1].name if contacts|length >= i else '' }}"
+                                                   maxlength="20"
+                                                   {{ 'required' if loop.first else '' }}>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <input type="tel" name="contact_phone_{{ i }}"
+                                                   class="form-control" placeholder="电话"
+                                                   value="{{ contacts[i-1].phone if contacts|length >= i else '' }}"
+                                                   pattern="[0-9]{8,11}" maxlength="11"
+                                                   {{ 'required' if loop.first else '' }}>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 预案详情 -->
+                <div class="card mb-4 border-danger">
+                    <div class="card-header bg-danger text-white py-2">
+                        <i class="bi bi-file-text me-2"></i>应急预案详情
+                        <span class="badge bg-white text-danger ms-2">
+                            已 {{ strategy.action_plan|length }} 字
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        {{ form.action_plan.label(class="form-label fw-bold") }}
+                        {{ form.action_plan(class="form-control", rows=12) }}
+                        <div class="d-flex justify-content-between mt-2">
+                            <small class="text-muted">
+                                已修改: <span id="charCount">{{ strategy.action_plan|length }}</span>/2000 字符
+                            </small>
+                            <small class="text-muted">
+                                <i class="bi bi-clock-history me-1"></i>
+                                上次更新: {{ strategy.created_at.strftime('%Y-%m-%d') }}
+                            </small>
+                        </div>
+                        {% for error in form.action_plan.errors %}
+                        <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="d-grid gap-2 d-md-flex justify-content-between border-top pt-3">
+                    <button type="button" class="btn btn-danger"
+                            data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="bi bi-trash3 me-1"></i> 删除预案
+                    </button>
+                    <div>
+                        <a href="{{ url_for('flood_control.list_strategies') }}"
+                           class="btn btn-secondary me-2">
+                            <i class="bi bi-x-circle me-1"></i> 取消
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i> 保存更改
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    确认删除防洪预案
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-octagon-fill me-2"></i>
+                    您正在永久删除 <strong>{{ strategy.river.name }}</strong> 的 {{ strategy.alert_level_label }} 预案
+                </div>
+
+                <div class="card border-danger mb-3">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">关联河流</small>
+                                <h5>{{ strategy.river.name }}</h5>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">警报级别</small>
+                                <h5>{{ strategy.alert_level_label }}</h5>
+                            </div>
+                        </div>
+                        <hr>
+                        <small class="text-muted">预案摘要</small>
+                        <p class="mb-0 text-truncate">{{ strategy.action_plan|truncate(100) }}</p>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    此操作将影响防汛应急响应！删除后预案不可恢复！
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> 取消
+                </button>
+                <form action="{{ url_for('flood_control.delete_strategy', strategy_id=strategy.strategy_id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash-fill me-1"></i> 确认删除
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 字符计数
+document.getElementById('action_plan').addEventListener('input', function() {
+    document.getElementById('charCount').textContent = this.value.length;
+});
+
+// 表单提交验证
+document.getElementById('editStrategyForm').addEventListener('submit', function(e) {
+    const name1 = document.querySelector('[name="contact_name_1"]').value;
+    const phone1 = document.querySelector('[name="contact_phone_1"]').value;
+
+    if (!name1 || !phone1) {
+        e.preventDefault();
+        alert('必须至少填写一个完整的联系人信息（姓名+电话）');
+        return false;
+    }
+
+    // 验证电话格式
+    const phoneRegex = /^[0-9]{8,11}$/;
+    for (let i = 1; i <= 3; i++) {
+        const phone = document.querySelector(`[name="contact_phone_${i}"]`).value;
+        if (phone && !phoneRegex.test(phone)) {
+            e.preventDefault();
+            alert(`联系人${i}的电话格式不正确，应为8-11位数字`);
+            return false;
+        }
+    }
+});
+</script>
+{% endblock %}

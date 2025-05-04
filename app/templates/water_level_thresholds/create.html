@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-lg mt-4">
+    <div class="card border-primary shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">
+                <i class="bi bi-droplet me-2"></i>新建水位阈值
+            </h4>
+        </div>
+
+        <div class="card-body">
+            <form method="POST" novalidate>
+                {{ form.hidden_tag() }}
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        {{ form.river_id.label(class="form-label") }}
+                        {{ form.river_id(class="form-select") }}
+                        <div class="form-text">选择需要设置水位阈值的河流</div>
+                        {% for error in form.river_id.errors %}
+                        <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form.threshold_value.label(class="form-label") }}
+                        <div class="input-group">
+                            {{ form.threshold_value(class="form-control") }}
+                            <span class="input-group-text">m</span>
+                        </div>
+                        <div class="form-text">精确到毫米的洪水警戒水位</div>
+                        {% for error in form.threshold_value.errors %}
+                        <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    {{ form.description.label(class="form-label") }}
+                    {{ form.description(class="form-control", rows=5) }}
+                    <div class="form-text">说明该阈值的应用场景和计算依据</div>
+                    {% for error in form.description.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="d-flex justify-content-end border-top pt-3">
+                    <a href="{{ url_for('water_level_threshold.list_thresholds') }}"
+                       class="btn btn-secondary me-2">
+                        取消
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i> 创建阈值
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// 初始化带搜索的下拉选择
+document.addEventListener('DOMContentLoaded', function() {
+    $('select[data-live-search="true"]').selectpicker();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo4j 知识图谱可视化</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        #container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        #header {
+            height: 120px; /* 合适的高度，能容纳标题和副标题 */
+            margin-bottom: 20px;
+            padding: 20px 25px; /* 增加内边距 */
+            background-color: #f8f9fa; /* 浅灰色背景 */
+            color: #333; /* 深灰色文字 */
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); /* 更柔和的阴影 */
+            border: 1px solid #e0e0e0; /* 添加细边框 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* 垂直居中内容 */
+        }
+
+        #header h1 {
+            margin: 0 0 8px 0; /* 调整标题间距 */
+            font-size: 28px;
+            font-weight: 500;
+            color: #2c3e50; /* 深蓝色标题保持专业感 */
+        }
+
+        #header p {
+            margin: 0;
+            font-size: 16px;
+            color: #666; /* 浅灰色副标题 */
+        }
+
+
+        #query-section {
+            display: flex;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+
+        #cypher-query {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            min-height: 80px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        #graph-container {
+        flex-grow: 1;
+        min-height: 100px; /* 默认最小高度 */
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: white;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        position: relative;
+        overflow: hidden;
+    }
+
+      /* 响应式调整 */
+    @media (max-width: 1200px) {
+        #graph-container {
+            min-height: 450px;
+        }
+    }
+
+    @media (max-width: 992px) {
+        #graph-container {
+            min-height: 400px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        #graph-container {
+            min-height: 350px;
+        }
+    }
+
+    @media (max-height: 700px) {
+        #graph-container {
+            min-height: 300px;
+        }
+    }
+        #graph-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            stroke: #fff;
+            stroke-width: 1.5px;
+        }
+
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+        }
+
+        .node-text {
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        .link-text {
+            font-size: 10px;
+            fill: #666;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        #info-panel {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            width: 300px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            display: none;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 50%;
+        }
+
+        #toolbar {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: white;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+        }
+        #quick-query-section {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    border: 1px solid #dee2e6;
+}
+
+.query-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.quick-query-btn {
+    padding: 8px 12px;
+    background-color: #e9ecef;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.quick-query-btn:hover {
+    background-color: #dee2e6;
+}
+
+#toggle-advanced {
+    background-color: transparent;
+    border: 1px dashed #6c757d;
+    color: #6c757d;
+    margin-left: auto;
+}
+
+#toggle-advanced:hover {
+    background-color: #f1f1f1;
+}
+
+    </style>
+</head>
+<body>
+<div id="container">
+    <div id="header">
+        <h1>Neo4j 知识图谱可视化</h1>
+        <p>输入 Cypher 查询语句，可视化您的图数据库数据</p>
+    </div>
+<div id="quick-query-section">
+    <h3>快捷查询</h3>
+    <div class="query-buttons">
+        <button class="quick-query-btn" data-query="MATCH (n:River) RETURN n, labels(n) as n_labels">河流数据</button>
+        <button class="quick-query-btn" data-query="MATCH (b:Basin) RETURN b, labels(b) as n_labels ">流域数据</button>
+        <button class="quick-query-btn" data-query="MATCH (n:WeatherStation) RETURN n, labels(n) as n_labels">气象站点</button>
+        <button class="quick-query-btn" data-query="MATCH (n)-[r]->(m) RETURN n, labels(n) as n_labels, r, m, labels(m) as m_labels">所有关系</button>
+        <button class="quick-query-btn" data-query="MATCH (n)-[r]->(m) RETURN n, labels(n) as n_labels, r, m, labels(m) as m_labels">所有关系</button>
+<!--        <button class="quick-query-btn" data-query="MATCH (b:Basin)-[r:CONTAINS]->(r:River) RETURN b, r, labels(r) as r_labels">流域-河流</button>-->
+<!--        <button class="quick-query-btn" data-query="MATCH p=shortestPath((a:River)-[*..5]-(b:Reservoir)) RETURN p">最短路径</button>-->
+<!--        <button class="quick-query-btn" data-query="MATCH (n) RETURN labels(n)[0] as type, count(*) as count ORDER BY count DESC">类型统计</button>-->
+        <button id="toggle-advanced">显示高级查询 ▼</button>
+    </div>
+</div>
+
+<div id="query-section" style="display:none;">
+    <textarea id="cypher-query">MATCH (n)-[r]->(m) RETURN n, labels(n) as n_labels, r, m, labels(m) as m_labels</textarea>
+    <div class="button-group">
+        <button id="execute-query">执行查询</button>
+        <button id="reset-graph">重置视图</button>
+    </div>
+</div>
+
+
+    <div id="graph-container">
+        <div id="loading">正在加载数据...</div>
+        <svg id="graph-svg">
+            <g id="zoomable-container"></g>
+        </svg>
+        <div id="info-panel"></div>
+        <div id="toolbar">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #1f77b4;"></div>
+                <span>节点类型1</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ff7f0e;"></div>
+                <span>节点类型2</span>
+            </div>
+            <!-- 图例会动态添加 -->
+        </div>
+    </div>
+</div>
+<script>
+    // 配置
+    const config = {
+        nodeRadius: 15,
+        linkDistance: 150,
+        chargeStrength: -200,
+
+        // 节点颜色映射（确保大小写完全匹配）
+        nodeColors: {
+            "River": "#1f77b4",               // 蓝色
+            "Basin": "#ff7f0e",               // 橙色
+            "Reservoir": "#2ca02c",           // 绿色
+            "FloodControlFacility": "#d62728",// 红色
+            "WeatherStation": "#9467bd",      // 紫色
+            "MonitoringStation": "#8c564b"    // 棕色
+        },
+
+        // 关系颜色映射
+        relationshipColors: {
+            "BELONGS_TO": "#8884d8",
+            "LOCATED_ON": "#82ca9d",
+            "PROTECTS": "#ffc658",
+            "MONITORS": "#ff8042"
+        },
+
+        // 默认颜色方案
+        defaultColorScale: d3.scaleOrdinal(d3.schemeCategory10),
+
+        /**
+         * 根据节点类型获取颜色（简化版，只接受type参数）
+         * @param {string} type - 节点类型字符串
+         * @returns {string} 颜色代码
+         */
+        getNodeColor: function (type) {
+            // 1. 参数校验
+            if (typeof type !== 'string' || !type.trim()) {
+                console.warn(`Invalid node type: ${type}, using default color`);
+                return this.defaultColorScale('unknown');
+            }
+
+            // 2. 标准化类型（去除前后空格）
+            const normalizedType = type.trim();
+
+            // 3. 调试输出
+            console.groupCollapsed(`[getNodeColor] Type: "${normalizedType}"`);
+            console.log('Available types:', Object.keys(this.nodeColors));
+
+            // 4. 精确匹配
+            if (this.nodeColors.hasOwnProperty(normalizedType)) {
+                console.log(`Exact match found: ${this.nodeColors[normalizedType]}`);
+                console.groupEnd();
+                return this.nodeColors[normalizedType];
+            }
+
+            // 5. 大小写不敏感匹配（备用方案）
+            const lowerType = normalizedType.toLowerCase();
+            for (const [key, color] of Object.entries(this.nodeColors)) {
+                if (key.toLowerCase() === lowerType) {
+                    console.log(`Case-insensitive match found: ${color}`);
+                    console.groupEnd();
+                    return color;
+                }
+            }
+
+            // 6. 默认回退
+            console.warn(`No color match for "${normalizedType}", using default`);
+            console.groupEnd();
+            return this.defaultColorScale(normalizedType);
+        },
+
+        // 验证颜色配置的辅助方法
+        validateColorConfig: function () {
+            console.group('Color Config Validation');
+            let isValid = true;
+
+            // 检查所有颜色值是否有效
+            Object.entries(this.nodeColors).forEach(([type, color]) => {
+                if (!/^#[0-9A-F]{6}$/i.test(color)) {
+                    console.error(`Invalid color code for ${type}: ${color}`);
+                    isValid = false;
+                }
+            });
+
+            if (isValid) console.log('All color codes are valid');
+            console.groupEnd();
+            return isValid;
+        }
+    };
+
+    // 初始化时验证配置
+    config.validateColorConfig();
+
+    // 测试用例
+    console.log('River:', config.getNodeColor('River'));      // 应返回 #1f77b4
+    console.log('river:', config.getNodeColor('river'));      // 应返回 #1f77b4（大小写不敏感）
+    console.log('Unknown:', config.getNodeColor('Unknown'));  // 应返回默认颜色
+
+
+    // 全局变量
+    let graphData = {nodes: [], links: []};
+    let simulation;
+    let svg, link, node, linkText, nodeText;
+
+    // DOM 元素
+    const cypherQueryEl = document.getElementById('cypher-query');
+    const executeBtn = document.getElementById('execute-query');
+    const resetBtn = document.getElementById('reset-graph');
+    const loadingEl = document.getElementById('loading');
+    const infoPanelEl = document.getElementById('info-panel');
+    const toolbarEl = document.getElementById('toolbar');
+
+    // 初始化 SVG
+    function initSVG() {
+        const container = document.getElementById('graph-container');
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+
+        svg = d3.select('#graph-svg')
+            .attr('width', width)
+            .attr('height', height);
+
+        // 添加缩放行为
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 8])  // 缩放范围：0.1倍到8倍
+            .on('zoom', zoomed);
+
+        svg.call(zoom);
+
+        // 定义箭头标记 - 这部分保持不变
+        svg.append('defs').selectAll('marker')
+            .data(['end'])
+            .enter().append('marker')
+            .attr('id', d => d)
+            .attr('viewBox', '0 -5 10 10')
+            .attr('refX', 25)
+            .attr('refY', 0)
+            .attr('markerWidth', 6)
+            .attr('markerHeight', 6)
+            .attr('orient', 'auto')
+            .append('path')
+            .attr('d', 'M0,-5L10,0L0,5')
+            .attr('fill', '#999');
+    }
+
+    // 缩放回调函数
+    function zoomed(event) {
+        d3.select('#zoomable-container').attr('transform', event.transform);
+    }
+
+    // 转换 Neo4j 数据为 D3 格式
+    function transformNeo4jData(neo4jData) {
+        const nodes = [];
+        const links = [];
+        const nodeMap = new Map();
+
+        neo4jData.data.forEach(record => {
+            // 处理节点n
+            if (record._fields[0] && typeof record._fields[0] === 'object') {
+                const nodeData = record._fields[0];
+                const nodeId = nodeData.id || nodeData._id || JSON.stringify(nodeData);
+
+                // 从n_labels字段获取标签
+                const labels = record._fields[record._fieldLookup.n_labels] || ['Node'];
+
+                if (!nodeMap.has(nodeId)) {
+                    nodes.push({
+                        id: nodeId,
+                        type: labels[0] || 'Node', // 使用第一个标签作为类型
+                        labels: labels,            // 保存所有标签
+                        properties: nodeData,
+                        label: nodeData.name || nodeData.title || labels[0] || 'Node',
+                        x: Math.random() * 400,
+                        y: Math.random() * 300
+                    });
+                    nodeMap.set(nodeId, true);
+                }
+            }
+
+            // 处理节点m
+            if (record._fields[record._fieldLookup.m] && typeof record._fields[record._fieldLookup.m] === 'object') {
+                const nodeData = record._fields[record._fieldLookup.m];
+                const nodeId = nodeData.id || nodeData._id || JSON.stringify(nodeData);
+
+                // 从m_labels字段获取标签
+                const labels = record._fields[record._fieldLookup.m_labels] || ['Node'];
+
+                if (!nodeMap.has(nodeId)) {
+                    nodes.push({
+                        id: nodeId,
+                        type: labels[0] || 'Node',
+                        labels: labels,
+                        properties: nodeData,
+                        label: nodeData.name || nodeData.title || labels[0] || 'Node',
+                        x: Math.random() * 400,
+                        y: Math.random() * 300
+                    });
+                    nodeMap.set(nodeId, true);
+                }
+            }
+        });
+
+        // 处理关系
+        neo4jData.data.forEach(record => {
+            if (record._fields[record._fieldLookup.r] && typeof record._fields[record._fieldLookup.r] === 'object') {
+                const relData = record._fields[record._fieldLookup.r];
+                const sourceNode = record._fields[record._fieldLookup.n];
+                const targetNode = record._fields[record._fieldLookup.m];
+
+                if (sourceNode && targetNode) {
+                    const sourceId = sourceNode.id || sourceNode._id || JSON.stringify(sourceNode);
+                    const targetId = targetNode.id || targetNode._id || JSON.stringify(targetNode);
+                    const relType = relData.type || (relData._type ? relData._type : 'RELATED_TO');
+
+                    links.push({
+                        source: sourceId,
+                        target: targetId,
+                        type: relType,
+                        properties: relData.properties || {}
+                    });
+                }
+            }
+        });
+
+        return {nodes, links};
+    }
+
+
+    // 更新图例
+    function updateLegend(nodeTypes) {
+        toolbarEl.innerHTML = '<h4>图例</h4>';
+        nodeTypes.forEach(type => {
+            const item = document.createElement('div');
+            item.className = 'legend-item';
+            // 使用 config.getNodeColor 而不是直接访问 colors
+            item.innerHTML = `
+                    <div class="legend-color" style="background-color: ${config.getNodeColor(type)};"></div>
+                    <span>${type}</span>
+                `;
+            toolbarEl.appendChild(item);
+        });
+    }
+
+    // 绘制力导向图
+    function drawForceGraph(data) {
+        console.log("节点类型:", [...new Set(data.nodes.map(d => d.type))]);
+
+        // 清除现有图形
+        svg.selectAll('#zoomable-container *').remove();
+
+        // 获取或创建可缩放容器
+        let zoomableContainer = svg.select('#zoomable-container');
+        if (zoomableContainer.empty()) {
+            zoomableContainer = svg.append('g').attr('id', 'zoomable-container');
+        }
+
+        // 更新图例
+        const nodeTypes = [...new Set(data.nodes.map(d => d.type))];
+        updateLegend(nodeTypes);
+
+        // 创建力导向模拟
+        simulation = d3.forceSimulation(data.nodes)
+            .force('link', d3.forceLink(data.links).id(d => d.id).distance(config.linkDistance))
+            .force('charge', d3.forceManyBody().strength(config.chargeStrength))
+            .force('center', d3.forceCenter(svg.attr('width') / 2, svg.attr('height') / 2))
+            .force('collision', d3.forceCollide().radius(config.nodeRadius + 5));
+
+        // 创建连线 - 现在添加到zoomableContainer
+        link = zoomableContainer.append('g')
+            .selectAll('line')
+            .data(data.links)
+            .enter().append('line')
+            .attr('class', 'link')
+            .attr('marker-end', 'url(#end)');
+
+        // 创建连线文本
+        linkText = zoomableContainer.append('g')
+            .selectAll('text')
+            .data(data.links)
+            .enter().append('text')
+            .attr('class', 'link-text')
+            .text(d => d.type)
+            .attr('font-size', 10)
+            .attr('fill', '#666');
+
+        // 创建节点组
+        const nodeGroups = zoomableContainer.append('g')
+            .selectAll('g')
+            .data(data.nodes)
+            .enter().append('g')
+            .call(d3.drag()
+                .on('start', dragstarted)
+                .on('drag', dragged)
+                .on('end', dragended));
+
+        // 修改节点圆形颜色设置部分
+        node = nodeGroups.append('circle')
+            .attr('class', 'node')
+            .attr('r', config.nodeRadius)
+            .attr('fill', d => {
+                const color = config.getNodeColor(d.type);
+                // console.log(d+'----===')
+                console.log(`节点类型: ${d.type}, 颜色: ${color}`);
+                return color;
+            })
+            .on('click', showNodeInfo);
+
+
+        // 添加节点文本
+        nodeText = nodeGroups.append('text')
+            .attr('class', '    node-text')
+            .attr('dy', config.nodeRadius + 15)
+            .text(d => d.label)
+            .attr('text-anchor', 'middle');
+
+        // 更新模拟时的图形位置
+        simulation.on('tick', () => {
+            link
+                .attr('x1', d => d.source.x)
+                .attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x)
+                .attr('y2', d => d.target.y);
+
+            linkText
+                .attr('x', d => (d.source.x + d.target.x) / 2)
+                .attr('y', d => (d.source.y + d.target.y) / 2);
+
+            nodeGroups
+                .attr('transform', d => `translate(${d.x},${d.y})`);
+        });
+    }
+
+
+    // 拖拽函数
+    function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+    }
+
+    function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+
+    // 显示节点信息
+    function showNodeInfo(event, d) {
+        infoPanelEl.style.display = 'block';
+
+        let html = `<h3>${d.label}</h3>`;
+        html += `<p><strong>类型:</strong> ${d.type}</p>`;
+        html += '<h4>属性:</h4><ul>';
+
+        for (const [key, value] of Object.entries(d.properties)) {
+            html += `<li><strong>${key}:</strong> ${JSON.stringify(value)}</li>`;
+        }
+
+        html += '</ul>';
+
+        // 查找相关关系
+        const relatedLinks = graphData.links.filter(
+            l => l.source.id === d.id || l.target.id === d.id
+        );
+
+        if (relatedLinks.length > 0) {
+            html += '<h4>关系:</h4><ul>';
+            relatedLinks.forEach(link => {
+                const otherNode = link.source.id === d.id ?
+                    graphData.nodes.find(n => n.id === link.target.id) :
+                    graphData.nodes.find(n => n.id === link.source.id);
+
+                const direction = link.source.id === d.id ? '→' : '←';
+                html += `<li>${direction} ${link.type} ${direction} ${otherNode.label}</li>`;
+            });
+            html += '</ul>';
+        }
+
+        infoPanelEl.innerHTML = html;
+    }
+
+    // 执行查询
+    async function executeQuery() {
+
+        const query = cypherQueryEl.value.trim();
+        if (!query) return;
+
+        try {
+            loadingEl.style.display = 'block';
+
+            // 发送请求到您的后端
+            const response = await axios.post('/neo4j/query', {
+                query: query,
+                parameters: {}
+            });
+            console.log("原始数据:", response.data[0]);
+            // 转换数据
+            const transformedData = transformNeo4jData(response.data);
+            graphData = transformedData;
+
+            // 绘制图形
+            drawForceGraph(transformedData);
+
+        } catch (error) {
+            console.error('查询错误:', error);
+            alert('查询执行失败: ' + (error.response?.data?.error || error.message));
+        } finally {
+            loadingEl.style.display = 'none';
+        }
+    }
+
+    // 重置视图
+    function resetView() {
+        if (simulation) {
+            simulation.alpha(1).restart();
+        }
+        infoPanelEl.style.display = 'none';
+        // 重置缩放和位置
+        svg.transition()
+            .duration(750)
+            .call(d3.zoom().transform, d3.zoomIdentity);
+    }
+    // 快捷查询执行函数
+async function executeQuickQuery(query) {
+    try {
+        loadingEl.style.display = 'block';
+        const response = await axios.post('/neo4j/query', {
+            query: query,
+            parameters: {}
+        });
+        const transformedData = transformNeo4jData(response.data);
+        graphData = transformedData;
+        drawForceGraph(transformedData);
+
+        // 快捷查询不修改高级查询框内容
+        console.log("执行快捷查询:", query);
+    } catch (error) {
+        console.error('快捷查询错误:', error);
+        alert('快捷查询执行失败: ' + (error.response?.data?.error || error.message));
+    } finally {
+        loadingEl.style.display = 'none';
+    }
+}
+
+
+// 高级查询切换函数
+function toggleAdvancedQuery() {
+    const advancedSection = document.getElementById('query-section');
+    const toggleBtn = document.getElementById('toggle-advanced');
+
+    if (advancedSection.style.display === 'none') {
+        advancedSection.style.display = 'block';
+        toggleBtn.textContent = '隐藏高级查询 ▲';
+    } else {
+        advancedSection.style.display = 'none';
+        toggleBtn.textContent = '显示高级查询 ▼';
+    }
+}
+
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+    initSVG();
+
+    // 初始化高级查询区域为隐藏状态
+    document.getElementById('query-section').style.display = 'none';
+
+    // 设置默认查询并执行
+    const DEFAULT_QUERY = "MATCH (n)-[r]->(m) RETURN n, labels(n) as n_labels, r, m, labels(m) as m_labels";
+    cypherQueryEl.value = DEFAULT_QUERY;
+
+    // 快捷查询按钮事件
+    document.querySelectorAll('.quick-query-btn').forEach(btn => {
+        if (!btn.id) { // 排除切换按钮
+            btn.addEventListener('click', function() {
+                // 点击快捷查询时不修改高级查询框内容
+                executeQuickQuery(this.getAttribute('data-query'));
+            });
+        }
+    });
+
+    // 高级查询切换按钮
+    document.getElementById('toggle-advanced').addEventListener('click', toggleAdvancedQuery);
+
+    // 原有的事件监听保持不变
+    executeBtn.addEventListener('click', executeQuery);
+    resetBtn.addEventListener('click', resetView);
+
+    // 初始执行默认查询
+    executeQuery(); // 直接执行高级查询框中的默认查询
+});
+
+
+
+    // 窗口大小变化时调整 SVG
+    window.addEventListener('resize', () => {
+        const container = document.getElementById('graph-container');
+        svg.attr('width', container.clientWidth)
+            .attr('height', container.clientHeight);
+
+        if (simulation) {
+            simulation.force('center',
+                d3.forceCenter(container.clientWidth / 2, container.clientHeight / 2));
+            simulation.alpha(1).restart();
+        }
+    });
+
+</script>
+</body>
+</html>

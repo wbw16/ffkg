@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>编辑洪水警报</h2>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between">
+            <span class="badge bg-{% if alert.alert_level == 'red' %}danger{% elif alert.alert_level == 'orange' %}warning{% else %}primary{% endif %}">
+                {{ alert.alert_level|upper }}警报
+            </span>
+            <small>{{ alert.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+        </div>
+
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('alert.edit_alert', alert_id=alert.alert_id) }}">
+                {{ form.csrf_token }}
+
+                <!-- 字段与create.html相同 -->
+                <div class="mb-3">
+                    {{ form.river_id.label(class="form-label") }}
+                    {{ form.river_id(class="form-select") }}
+                </div>
+
+                <!-- 其他字段... -->
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> 更新
+                </button>
+                <a href="{{ url_for('alert.list_alerts') }}" class="btn btn-secondary">
+                    取消
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-lg mt-4">
+    <div class="card border-primary shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between">
+            <h4 class="mb-0">
+                <i class="bi bi-pencil-square me-2"></i>
+                编辑降雨量阈值 #{{ threshold.threshold_id }}
+            </h4>
+            <span class="badge bg-light text-dark">
+                创建于 {{ threshold.created_at.strftime('%Y-%m-%d') }}
+            </span>
+        </div>
+
+        <div class="card-body">
+            <form method="POST" novalidate>
+                {{ form.hidden_tag() }}
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">所属流域</label>
+                        <div class="p-2 bg-light rounded">
+                            <h5 class="mb-0">{{ threshold.basin.name }}</h5>
+                            <small class="text-muted">{{ threshold.basin.region }}</small>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form.threshold_value.label(class="form-label") }}
+                        <div class="input-group">
+                            {{ form.threshold_value(class="form-control") }}
+                            <span class="input-group-text">mm</span>
+                        </div>
+                        <small class="text-muted">
+                            原值: {{ "%.2f"|format(threshold.threshold_value) }}
+                        </small>
+                        {% for error in form.threshold_value.errors %}
+                        <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    {{ form.description.label(class="form-label") }}
+                    {{ form.description(class="form-control", rows=5) }}
+                    <small class="text-muted">
+                        原内容: {{ threshold.description|default('暂无说明', true) }}
+                    </small>
+                    {% for error in form.description.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="d-flex justify-content-between border-top pt-3">
+                    <button type="button" class="btn btn-danger"
+                            data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="bi bi-trash3 me-1"></i> 删除阈值
+                    </button>
+                    <div>
+                        <a href="{{ url_for('rainfall_threshold.list_thresholds') }}"
+                           class="btn btn-secondary me-2">
+                            取消
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i> 保存更改
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">确认删除阈值</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>确定要永久删除 <strong>{{ threshold.basin.name }}</strong> 的降雨量阈值吗？</p>
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    该操作不可撤销，可能导致降雨预警功能失效
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <form action="{{ url_for('rainfall_threshold.delete_threshold', threshold_id=threshold.threshold_id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">确认删除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

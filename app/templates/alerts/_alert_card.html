@@ -1,0 +1,31 @@
+<div class="alert-card mb-3 p-3 border rounded {% if alert.alert_level == 'red' %}border-danger{% elif alert.alert_level == 'orange' %}border-warning{% else %}border-primary{% endif %}">
+    <div class="d-flex justify-content-between">
+        <div>
+            <h5 class="mb-1">
+                <span class="badge bg-{% if alert.alert_level == 'red' %}danger{% elif alert.alert_level == 'orange' %}warning{% else %}primary{% endif %}">
+                    {{ '红色' if alert.alert_level == 'red' else '橙色' if alert.alert_level == 'orange' else '黄色' }}预警
+                </span>
+                <a href="{{ url_for('river.detail', river_id=alert.river_id) }}">
+                    {{ alert.river.name }}
+                </a>
+            </h5>
+            <small class="text-muted">{{ alert.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+        </div>
+        <div>
+            <a href="{{ url_for('alert.edit_alert', alert_id=alert.alert_id) }}"
+               class="btn btn-sm btn-outline-secondary">
+                编辑
+            </a>
+            <form class="d-inline" method="post"
+                  action="{{ url_for('alert.delete_alert', alert_id=alert.alert_id) }}"
+                  onsubmit="return confirm('确定删除此警报吗？');">
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                    删除
+                </button>
+            </form>
+        </div>
+    </div>
+    <div class="mt-2">
+        <p class="mb-0">{{ alert.description }}</p>
+    </div>
+</div>

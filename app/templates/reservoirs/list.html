@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}水库列表{% endblock %}
+{% block header %}
+    <h2>水库管理</h2>
+    <a href="{{ url_for('reservoir.create_reservoir') }}" class="btn-add">新建水库</a>
+{% endblock %}
+
+{% block content %}
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>水库ID</th>
+                    <th>水库名称</th>
+                    <th>库容(万m³)</th>
+                    <th>所在河流</th>
+                    <th>所属流域</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reservoir in reservoirs %}
+                    <tr>
+                        <td>{{ reservoir.reservoir_id }}</td>
+                        <td>{{ reservoir.name }}</td>
+                        <td>{{ "%.2f"|format(reservoir.capacity) }}</td>
+                        <td>{{ reservoir.river.name }}</td>
+                        <td>{{ reservoir.river.basin.name }}</td>
+                        <td class="actions">
+                            <a href="{{ url_for('reservoir.edit_reservoir', reservoir_id=reservoir.reservoir_id) }}"
+                               class="btn-edit">编辑</a>
+                            <form action="{{ url_for('reservoir.delete_reservoir', reservoir_id=reservoir.reservoir_id) }}"
+                                  method="post">
+                                <button type="submit" class="btn-delete"
+                                        onclick="return confirm('确定要删除这个水库吗？相关的监测站数据将受影响！')">
+                                    删除
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="no-data">暂无水库数据</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

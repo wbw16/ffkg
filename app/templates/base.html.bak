@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>水利知识平台 - {% block title %}{% endblock %}</title>
+    <style>
+        /* 基础样式 */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        nav {
+            background: #2c3e50;
+            color: white;
+            padding: 1rem;
+        }
+
+        nav h1 {
+            margin: 0;
+            padding: 0;
+            font-size: 1.5rem;
+        }
+
+        .nav-links {
+            margin-top: 1rem;
+        }
+
+        /* 导航分组样式 */
+        .nav-group {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #4a5a6b;
+        }
+
+        .nav-group:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        /* 导航链接样式 */
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            margin-right: 0.5rem;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        .nav-links a:hover {
+            background-color: #34495e;
+        }
+
+        .nav-links a.active {
+            background-color: #3498db;
+            font-weight: bold;
+        }
+
+        /* 容器样式 */
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        /* 提示消息样式 */
+        .alert {
+            padding: 0.75rem 1.25rem;
+            margin-bottom: 1rem;
+            border: 1px solid transparent;
+            border-radius: 0.25rem;
+        }
+
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+
+        .alert-error {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        /* 页面标题样式 */
+        .page-header {
+            margin-bottom: 2rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <h1>水利知识平台</h1>
+        <div class="nav-links">
+            <!-- 第一组：基础管理模块 -->
+            <div class="nav-group">
+                <a href="{{ url_for('main.index') }}" {% if request.path == '/' %}class="active"{% endif %}>首页</a>
+                <a href="{{ url_for('basin.list_basins') }}" {% if request.blueprint == 'basin' %}class="active"{% endif %}>流域管理</a>
+                <a href="{{ url_for('river.list_rivers') }}" {% if request.blueprint == 'river' %}class="active"{% endif %}>河流管理</a>
+                <a href="{{ url_for('reservoir.list_reservoirs') }}" {% if request.blueprint == 'reservoir' %}class="active"{% endif %}>水库管理</a>
+                <a href="{{ url_for('facility.list_facilities') }}" {% if request.blueprint == 'facility' %}class="active"{% endif %}>防洪设施</a>
+                <a href="{{ url_for('station.list_stations') }}" {% if request.blueprint == 'station' %}class="active"{% endif %}>气象监测</a>
+                <a href="{{ url_for('monitor.list_monitors') }}" {% if request.blueprint == 'monitor' %}class="active"{% endif %}>水文监测站</a>
+            </div>
+
+            <!-- 第二组：监测与预警模块 -->
+           <div class="nav-group">
+                <a href="{{ url_for('alert.list_alerts') }}" {% if request.blueprint == 'alert' %}class="active"{% endif %}>警报管理</a>
+                <a href="{{ url_for('precipitation.precipitation_chart') }}" {% if request.blueprint == 'precipitation' %}class="active"{% endif %}>降水数据</a>
+                <a href="{{ url_for('reservoir_release.list_releases') }}" {% if request.blueprint == 'reservoir_release' %}class="active"{% endif %}>水库泄洪</a>
+                <a href="{{ url_for('river_flow.list_flows') }}" {% if request.blueprint == 'river_flow' %}class="active"{% endif %}>河流流量</a>
+                <a href="{{ url_for('water_level.list_water_levels') }}" {% if request.blueprint == 'water_level' %}class="active"{% endif %}>水位数据</a>
+                <a href="{{ url_for('historical_flood.list_floods') }}" {% if request.blueprint == 'historical_flood' %}class="active"{% endif %}>历史洪水</a>
+                <a href="{{ url_for('threshold.list_thresholds') }}" {% if request.blueprint == 'threshold' %}class="active"{% endif %}>综合阈值</a>
+                <a href="{{ url_for('flood_control.list_strategies') }}" {% if request.blueprint == 'flood_control' %}class="active"{% endif %}>防洪措施</a>
+                <a href="{{ url_for('rainfall_threshold.list_thresholds') }}" {% if request.blueprint == 'rainfall_threshold' %}class="active"{% endif %}>降雨阈值</a>
+                <a href="{{ url_for('water_level_threshold.list_thresholds') }}" {% if request.blueprint == 'water_level_threshold' %}class="active"{% endif %}>水位阈值</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <header class="page-header">
+            {% block header %}{% endblock %}
+        </header>
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-lg mt-4">
+    <div class="card border-primary">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">
+                <i class="bi bi-water me-2"></i>新建水位记录
+            </h4>
+            <span class="badge bg-light text-dark">
+                <i class="bi bi-info-circle me-1"></i>
+                精确到毫米级
+            </span>
+        </div>
+
+        <div class="card-body">
+            <form method="POST" id="waterLevelForm" novalidate>
+                {{ form.hidden_tag() }}
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        {{ form.monitor_id.label(class="form-label") }}
+                        <div class="input-group">
+                            {{ form.monitor_id(class="form-select") }}
+                            <button class="btn btn-outline-secondary" type="button"
+                                data-bs-toggle="tooltip"
+                                title="刷新监测站列表"
+                                onclick="refreshStations()">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            选择关联的水位监测站
+                        </div>
+                        <div id="stationInfo" class="mt-2 alert alert-secondary py-2" style="display:none;">
+                            <small>
+                                <i class="bi bi-info-circle"></i>
+                                <span id="riverName"></span> |
+                                警戒水位: <strong id="warningLevel">未设置</strong>
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form.timestamp.label(class="form-label") }}
+                        <div class="input-group">
+                            {{ form.timestamp(
+                                class="form-control",
+                                placeholder="YYYY-MM-DD HH:MM",
+                                **{"data-toggle": "datetimepicker"}
+                            ) }}
+                            <button class="btn btn-outline-secondary" type="button"
+                                onclick="document.getElementById('timestamp').value='{{ now }}'">
+                                当前时间
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        {{ form.level.label(class="form-label") }}
+                        <div class="input-group has-validation">
+                            {{ form.level(
+                                class="form-control",
+                                placeholder="0.000",
+                                step="0.001",
+                                **{"aria-describedby": "levelHelp"}
+                            ) }}
+                            <span class="input-group-text">m</span>
+                            <div class="invalid-feedback">
+                                请输入有效的水位值 (0-1000米)
+                            </div>
+                        </div>
+                        <div id="levelHelp" class="form-text">
+                            请输入精确到毫米的水位高程
+                        </div>
+                        <div id="levelAlert" class="alert alert-warning mt-2 py-2" style="display:none;">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            <span id="alertText"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form.notes.label(class="form-label") }}
+                        {{ form.notes(class="form-control", rows="3") }}
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end border-top pt-3">
+                    <a href="{{ url_for('water_level.list_water_levels') }}"
+                       class="btn btn-secondary me-md-2">
+                        <i class="bi bi-x-circle"></i> 取消
+                    </a>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="bi bi-check-circle"></i> 提交记录
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// 动态加载监测站信息
+function refreshStations() {
+    fetch("{{ url_for('api.get_stations') }}")
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('monitor_id');
+            select.innerHTML = '';
+            data.forEach(station => {
+                const option = document.createElement('option');
+                option.value = station.id;
+                option.textContent = `${station.name} (${station.river}) - 警戒: ${station.warning_level || '未设'}m`;
+                select.appendChild(option);
+            });
+        });
+}
+
+// 监测站选择变化时更新信息
+document.getElementById('monitor_id').addEventListener('change', function() {
+    const stationId = this.value;
+    if (stationId) {
+        fetch(`/api/station/${stationId}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('riverName').textContent = data.river;
+                document.getElementById('warningLevel').textContent =
+                    data.warning_level ? `${data.warning_level}m` : '未设置';
+                document.getElementById('stationInfo').style.display = 'block';
+            });
+    } else {
+        document.getElementById('stationInfo').style.display = 'none';
+    }
+});
+
+// 水位输入实时验证
+document.getElementById('level').addEventListener('input', function() {
+    const value = parseFloat(this.value);
+    const warningLevel = parseFloat(
+        document.getElementById('warningLevel').textContent
+    );
+
+    const alertDiv = document.getElementById('levelAlert');
+    if (isNaN(value)) {
+        alertDiv.style.display = 'none';
+        return;
+    }
+
+    if (warningLevel && value >= warningLevel) {
+        alertDiv.style.display = 'block';
+        document.getElementById('alertText').textContent =
+            `警告：水位超过警戒线 (${warningLevel}m)！`;
+        alertDiv.className = 'alert alert-danger mt-2 py-2';
+    } else if (warningLevel && value >= warningLevel * 0.9) {
+        alertDiv.style.display = 'block';
+        document.getElementById('alertText').textContent =
+            `注意：水位接近警戒线 (${warningLevel}m)`;
+        alertDiv.className = 'alert alert-warning mt-2 py-2';
+    } else {
+        alertDiv.style.display = 'none';
+    }
+});
+
+// 表单提交前验证
+document.getElementById('waterLevelForm').addEventListener('submit', function(e) {
+    const levelValue = parseFloat(document.getElementById('level').value);
+    if (levelValue > 1000 || levelValue < 0) {
+        e.preventDefault();
+        alert('水位值必须在0-1000米之间');
+    }
+});
+</script>
+{% endblock %}

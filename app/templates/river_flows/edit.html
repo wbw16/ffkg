@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card border-warning shadow-lg">
+        <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">
+                <i class="bi bi-pencil-square me-2"></i>
+                编辑流量记录 #{{ flow.flow_id }}
+            </h4>
+            <div>
+                <span class="badge bg-light text-dark me-2">
+                    <i class="bi bi-calendar me-1"></i>
+                    {{ flow.timestamp.strftime('%Y-%m-%d') }}
+                </span>
+                <span class="badge bg-info">
+                    <i class="bi bi-clock-history me-1"></i>
+                    创建于 {{ flow.created_at.strftime('%H:%M') }}
+                </span>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <form method="POST" id="editFlowForm">
+                {{ form.hidden_tag() }}
+
+                <!-- 不可编辑的基础信息 -->
+                <div class="card mb-4 border-secondary">
+                    <div class="card-header bg-light py-2">
+                        <i class="bi bi-info-circle me-2"></i>基础信息
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">河流名称</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control-plaintext"
+                                               value="{{ flow.river.name }} - {{ flow.river.basin.name }}流域" readonly>
+                                        <a href="{{ url_for('river.detail', river_id=flow.river_id) }}"
+                                           class="btn btn-outline-secondary" target="_blank">
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">最近24小时均值</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control-plaintext"
+                                               value="{{ '%0.2f'|format(recent_avg) if recent_avg else '暂无数据' }} m³/s" readonly>
+                                        <button type="button" class="btn btn-outline-info"
+                                                data-bs-toggle="tooltip" title="该河流过去24小时平均流量">
+                                            <i class="bi bi-info-circle"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 可编辑数据 -->
+                <div class="row mb-4">
+                    <!-- 流量编辑 -->
+                    <div class="col-md-6">
+                        <div class="card h-100 border-success">
+                            <div class="card-header bg-success text-white py-2">
+                                <i class="bi bi-graph-up me-2"></i>流量数据
+                            </div>
+                            <div class="card-body">
+                                {{ form.flow_rate.label(class="form-label fw-bold") }}
+                                <div class="input-group has-validation">
+                                    {{ form.flow_rate(
+                                        class="form-control",
+                                        value="%.2f"|format(flow.flow_rate)
+                                    ) }}
+                                    <span class="input-group-text">m³/s</span>
+                                </div>
+                                <div class="d-flex justify-content-between mt-2">
+                                    <small class="text-muted">
+                                        <i class="bi bi-arrow-left me-1"></i>
+                                        原值: {{ "%.2f"|format(flow.flow_rate) }}
+                                    </small>
+                                    <small class="text-muted">
+                                        差值: <span id="flowDiff" class="fw-bold">0.00</span> m³/s
+                                    </small>
+                                </div>
+                                {% for error in form.flow_rate.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+
+                                <div class="alert mt-2 py-2 d-none" id="flowAlert">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    <span id="flowAlertText"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 时间编辑 -->
+                    <div class="col-md-6">
+                        <div class="card h-100 border-primary">
+                            <div class="card-header bg-primary text-white py-2">
+                                <i class="bi bi-clock-history me-2"></i>时间校准
+                            </div>
+                            <div class="card-body">
+                                {{ form.timestamp.label(class="form-label fw-bold") }}
+                                <div class="input-group">
+                                    {{ form.timestamp(
+                                        class="form-control datetimepicker-input",
+                                        id="editTimePicker",
+                                        value=flow.timestamp.strftime('%Y-%m-%d %H:%M')
+                                    ) }}
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar-check me-1"></i>
+                                        原始记录时间: {{ flow.timestamp.strftime('%Y-%m-%d %H:%M') }}
+                                    </small>
+                                </div>
+                                {% for error in form.timestamp.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="d-flex justify-content-between border-top pt-3">
+                    <button type="button" class="btn btn-danger"
+                            data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="bi bi-trash3 me-1"></i> 删除记录
+                    </button>
+                    <div>
+                        <a href="{{ url_for('river_flow.list_flows') }}"
+                           class="btn btn-secondary me-2">
+                            <i class="bi bi-x-circle me-1"></i> 取消
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save-fill me-1"></i> 保存更改
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    确认删除流量记录
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-octagon-fill me-2"></i>
+                    您正在删除 <strong>{{ flow.river.name }}</strong> 的流量监测记录
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <div class="card h-100 border-danger">
+                            <div class="card-body text-center py-3">
+                                <div class="text-muted small">流量值</div>
+                                <div class="h2 text-danger">
+                                    {{ "%.2f"|format(flow.flow_rate) }}<small>m³/s</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body text-center py-3">
+                                <div class="text-muted small">记录时间</div>
+                                <div class="h4">{{ flow.timestamp.strftime('%m-%d %H:%M') }}</div>
+                                <small class="text-muted">{{ flow.river.basin.name }}流域</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning small">
+                    <i class="bi bi-info-circle-fill me-1"></i>
+                    该操作将影响流量统计分析，删除后不可恢复！
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> 取消
+                </button>
+                <form action="{{ url_for('river_flow.delete_flow', flow_id=flow.flow_id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash3-fill me-1"></i> 确认删除
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div

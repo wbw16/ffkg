@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>新建洪水警报</h2>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('alert.create_alert') }}">
+                {{ form.csrf_token }}
+
+                <div class="mb-3">
+                    {{ form.river_id.label(class="form-label") }}
+                    {{ form.river_id(class="form-select") }}
+                    {% if form.river_id.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.river_id.errors[0] }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    {{ form.alert_level.label(class="form-label") }}
+                    {{ form.alert_level(class="form-select") }}
+                </div>
+
+                <div class="mb-3">
+                    {{ form.description.label(class="form-label") }}
+                    {{ form.description(class="form-control", rows=4) }}
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> 保存
+                </button>
+                <a href="{{ url_for('alert.list_alerts') }}" class="btn btn-secondary">
+                    <i class="bi bi-x-lg"></i> 取消
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

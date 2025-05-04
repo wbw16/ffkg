@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">
+                <i class="bi bi-droplet me-2"></i>新建水库放水记录
+            </h4>
+        </div>
+
+        <div class="card-body">
+            <form method="POST" novalidate>
+                {{ form.csrf_token }}
+
+                <!-- 水库选择 -->
+                <div class="mb-3">
+                    {{ form.reservoir_id.label(class="form-label") }}
+                    {{ form.reservoir_id(class="form-select") }}
+                    {% for error in form.reservoir_id.errors %}
+                        <div class="invalid-feedback d-block">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <!-- 放水量输入 -->
+                <div class="mb-3">
+                    {{ form.amount.label(class="form-label") }}
+                    <div class="input-group">
+                        {{ form.amount(class="form-control", placeholder="请输入放水量") }}
+                        <span class="input-group-text">万立方米</span>
+                    </div>
+                    {% for error in form.amount.errors %}
+                        <div class="invalid-feedback d-block">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <!-- 时间选择 -->
+                <div class="mb-4">
+                    {{ form.timestamp.label(class="form-label") }}
+                    {{ form.timestamp(class="form-control", type="datetime-local") }}
+                    {% for error in form.timestamp.errors %}
+                        <div class="invalid-feedback d-block">{{ error }}</div>
+                    {% endfor %}
+                    <small class="text-muted">不填默认为当前时间</small>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{{ url_for('reservoir_release.list_releases') }}"
+                       class="btn btn-secondary me-md-2">
+                        <i class="bi bi-x-circle"></i> 取消
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> 保存记录
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

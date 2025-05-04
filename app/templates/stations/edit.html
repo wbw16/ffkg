@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}编辑气象站 - {{ station.name }}{% endblock %}
+{% block header %}<h2>编辑气象站 - {{ station.name }}</h2>{% endblock %}
+
+{% block content %}
+    <form method="post" class="data-form">
+        <div class="readonly-field">
+            <span class="detail-label">气象站ID:</span>
+            <span class="detail-value">{{ station.station_id }}</span>
+        </div>
+
+        <div class="form-group">
+            <label for="name">气象站名称:</label>
+            <input type="text" id="name" name="name" value="{{ station.name }}" required>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="latitude">纬度:</label>
+                <input type="number" id="latitude" name="latitude"
+                       value="{{ station.latitude }}" step="0.0001" min="-90" max="90" required>
+                <span class="unit">度(°)</span>
+            </div>
+
+            <div class="form-group">
+                <label for="longitude">经度:</label>
+                <input type="number" id="longitude" name="longitude"
+                       value="{{ station.longitude }}" step="0.0001" min="-180" max="180" required>
+                <span class="unit">度(°)</span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="basin_id">监测流域:</label>
+            <select id="basin_id" name="basin_id" required>
+                {% for basin in basins %}
+                    <option value="{{ basin.basin_id }}"
+                            {% if basin.basin_id == station.basin_id %}selected{% endif %}>
+                        {{ basin.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">更新</button>
+            <a href="{{ url_for('station.list_stations') }}" class="btn-cancel">返回</a>
+        </div>
+    </form>
+{% endblock %}

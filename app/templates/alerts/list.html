@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}洪水警报管理{% endblock %}
+{% block header %}
+    <h2>洪水警报管理</h2>
+    <a href="{{ url_for('alert.create_alert') }}" class="btn-add">新建警报</a>
+{% endblock %}
+
+{% block content %}
+    <div class="table-container">
+        <div class="filter-bar">
+            <form method="get" class="filter-form">
+                <select name="river_id" class="filter-select">
+                    <option value="">全部河流</option>
+                    {% for river in rivers %}
+                    <option value="{{ river.river_id }}" {% if river.river_id == current_river_id %}selected{% endif %}>
+                        {{ river.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn-filter">筛选</button>
+            </form>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>警报ID</th>
+                    <th>警报级别</th>
+                    <th>关联河流</th>
+                    <th>发布时间</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alert in alerts.items %}
+                <tr>
+                    <td>{{ alert.alert_id }}</td>
+                    <td><span class="level-tag {{ alert.level|lower }}">{{ alert.level }}</span></td>
+                    <td>
+                        {% if alert.river %}
+                        <span class="relation-info">
+                            {{ alert.river.name }}
+                            <span class="relation-meta">({{ alert.river.basin.name }})</span>
+                        </span>
+                        {% else %}
+                        <span class="no-relation">未关联河流</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if alert.issued_at %}
+                            {{ alert.issued_at.strftime('%Y-%m-%d %H:%M') }}
+                        {% elif alert.created_at %}
+                            {{ alert.created_at.strftime('%Y-%m-%d %H:%M') }}
+                        {% else %}
+                            未设置时间
+                        {% endif %}
+                    </td>
+                    <td><span class="status-tag {{ alert.status|lower }}">{{ alert.status }}</span></td>
+                    <td class="actions">
+                        <a href="{{ url_for('alert.edit_alert', alert_id=alert.alert_id) }}" class="btn-edit">编辑</a>
+                        <form action="{{ url_for('alert.delete_alert', alert_id=alert.alert_id) }}" method="post">
+                            <button type="submit" class="btn-delete">删除</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="no-data">暂无警报记录</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if alerts.pages > 1 %}
+        <div class="pagination">
+            {{ render_pagination(alerts, 'alert.list_alerts', river_id=current_river_id) }}
+        </div>
+        {% endif %}
+    </div>
+{% endblock %}

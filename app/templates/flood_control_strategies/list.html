@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+
+{% block title %}防洪应急预案库{% endblock %}
+{% block header %}
+    <h2>防洪应急预案库</h2>
+    <a href="{{ url_for('flood_control.create_strategy') }}" class="btn-add">新建预案</a>
+{% endblock %}
+
+{% block content %}
+    <div class="table-container">
+        <div class="filter-bar">
+            <form method="get" class="filter-form">
+                <select name="river_id" class="filter-select" onchange="this.form.submit()">
+                    <option value="">全部河流</option>
+                    {% for river in rivers %}
+                    <option value="{{ river.river_id }}" {% if river.river_id == current_river_id %}selected{% endif %}>
+                        {{ river.name }} ({{ river.basin.name }})
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <select name="alert_level" class="filter-select" onchange="this.form.submit()">
+                    <option value="">全部级别</option>
+                    <option value="yellow" {% if alert_level == 'yellow' %}selected{% endif %}>黄色警报</option>
+                    <option value="orange" {% if alert_level == 'orange' %}selected{% endif %}>橙色警报</option>
+                    <option value="red" {% if alert_level == 'red' %}selected{% endif %}>红色警报</option>
+                </select>
+
+                {% if current_river_id or alert_level %}
+                <a href="{{ url_for('flood_control.list_strategies') }}" class="btn-filter reset">重置</a>
+                {% endif %}
+            </form>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th width="20%">关联河流</th>
+                    <th width="10%">警报级别</th>
+                    <th>预案摘要</th>
+                    <th width="15%">更新时间</th>
+                    <th width="12%">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for strategy in strategies.items %}
+                <tr>
+                    <td>
+                        <div class="relation-info">
+                            <strong>{{ strategy.river.name }}</strong>
+                            <span class="relation-meta">{{ strategy.river.basin.name }}流域</span>
+                        </div>
+                    </td>
+                    <td>
+
+                    </td>
+                    <td class="summary">
+                        {{ strategy.action_plan|truncate(150) }}
+                    </td>
+                    <td>
+                        {{ strategy.created_at.strftime('%Y-%m-%d') }}
+                    </td>
+                    <td class="actions">
+                        <a href="{{ url_for('flood_control.edit_strategy', strategy_id=strategy.strategy_id) }}"
+                           class="btn-edit">编辑</a>
+                        <button class="btn-delete"
+                                onclick="showDeleteModal('{{ strategy.strategy_id }}')">删除</button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="no-data">
+                        <i class="bi bi-database-exclamation"></i> 没有找到匹配的防洪预案
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if strategies.pages > 1 %}
+        <div class="pagination">
+            {{ render_pagination(strategies, 'flood_control.list_strategies',
+                               river_id=current_river_id,
+                               alert_level=alert_level) }}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 删除确认模态框 (默认隐藏) -->
+    <div id="deleteModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4>确认删除防洪预案</h4>
+                <span class="close" onclick="hideDeleteModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="warning-message">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    您正在删除 <strong id="modal-river-name"></strong> 的<span id="modal-alert-level"></span>预案
+                </div>
+                <div class="modal-details">
+                    <div>
+                        <small>警报级别</small>
+                        <div id="modal-level-display"></div>
+                    </div>
+                    <div>
+                        <small>制定时间</small>
+                        <div id="modal-created-at"></div>
+                    </div>
+                </div>
+                <div class="warning-note">
+                    <i class="bi bi-info-circle"></i>
+                    删除后将影响应急响应流程，请谨慎操作！
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="hideDeleteModal()" class="btn-cancel">取消</button>
+                <form id="deleteForm" method="POST">
+                    <button type="submit" class="btn-confirm-delete">确认删除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 存储策略数据的对象
+        const strategyData = {
+            {% for strategy in strategies.items %}
+            '{{ strategy.strategy_id }}': {
+                riverName: '{{ strategy.river.name }}',
+                alertLevel: '{{ strategy.alert_level_label }}',
+                createdAt: '{{ strategy.created_at.strftime('%Y-%m-%d') }}'
+            },
+            {% endfor %}
+        };
+
+        function showDeleteModal(strategyId) {
+            const data = strategyData[strategyId];
+            if (data) {
+                document.getElementById('modal-river-name').textContent = data.riverName;
+                document.getElementById('modal-alert-level').textContent = data.alertLevel;
+                document.getElementById('modal-level-display').textContent = data.alertLevel;
+                document.getElementById('modal-created-at').textContent = data.createdAt;
+
+                document.getElementById('deleteForm').action =
+                    '/flood_control/delete_strategy/' + strategyId;
+                document.getElementById('deleteModal').style.display = 'block';
+            }
+        }
+
+        function hideDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+        }
+
+        // 点击模态框外部关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('deleteModal');
+            if (event.target == modal) {
+                hideDeleteModal();
+            }
+        }
+    </script>
+{% endblock %}

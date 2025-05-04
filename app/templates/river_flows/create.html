@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card border-primary shadow-lg">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">
+                <i class="bi bi-speedometer me-2"></i>新建河流流量记录
+            </h4>
+            <span class="badge bg-light text-dark">
+                <i class="bi bi-water me-1"></i> 实时监测
+            </span>
+        </div>
+
+        <div class="card-body">
+            <form method="POST" id="flowForm" novalidate>
+                {{ form.hidden_tag() }}
+
+                <!-- 河流选择 -->
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header py-2 bg-light">
+                                <i class="bi bi-geo-alt me-2"></i>监测点位选择
+                            </div>
+                            <div class="card-body">
+                                {{ form.river_id.label(class="form-label fw-bold") }}
+                                <div class="input-group">
+                                    {{ form.river_id(class="form-select") }}
+                                    <button type="button" class="btn btn-outline-secondary"
+                                            data-bs-toggle="tooltip" title="选择需要记录流量的河流">
+                                        <i class="bi bi-info-circle"></i>
+                                    </button>
+                                </div>
+                                <div class="form-text small">
+                                    请选择已安装流量监测设备的河流
+                                </div>
+                                {% for error in form.river_id.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 流量数据录入 -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card h-100 border-success">
+                            <div class="card-header bg-success text-white py-2">
+                                <i class="bi bi-graph-up me-2"></i>流量数据
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    {{ form.flow_rate.label(class="form-label fw-bold") }}
+                                    <div class="input-group has-validation">
+                                        {{ form.flow_rate(
+                                            class="form-control",
+                                            placeholder="输入实时监测值"
+                                        ) }}
+                                        <span class="input-group-text">m³/s</span>
+                                    </div>
+                                    <div class="form-text small">
+                                        当前参考值：
+                                        <span id="referenceFlow" class="fw-bold">--</span> m³/s
+                                        （该河流最近记录）
+                                    </div>
+                                    {% for error in form.flow_rate.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card h-100 border-info">
+                            <div class="card-header bg-info text-white py-2">
+                                <i class="bi bi-clock me-2"></i>记录时间
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    {{ form.timestamp.label(class="form-label fw-bold") }}
+                                    <div class="input-group">
+                                        {{ form.timestamp(
+                                            class="form-control datetimepicker-input",
+                                            id="datetimePicker",
+                                            value=now().strftime('%Y-%m-%d %H:%M')
+                                        ) }}
+                                        <button class="btn btn-outline-secondary" type="button"
+                                                onclick="document.getElementById('datetimePicker').value='{{ now().strftime('%Y-%m-%d %H:%M') }}'">
+                                            重置为当前
+                                        </button>
+                                    </div>
+                                    <div class="form-text small">
+                                        留空将自动记录提交时间
+                                    </div>
+                                    {% for error in form.timestamp.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="d-flex justify-content-end border-top pt-3">
+                    <a href="{{ url_for('river_flow.list_flows') }}"
+                       class="btn btn-secondary me-2">
+                        <i class="bi bi-x-circle me-1"></i> 取消
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save-fill me-1"></i> 保存记录
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 脚本部分 -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化时间选择器
+    $('#datetimePicker').datetimepicker({
+        format: 'YYYY-MM-DD HH:mm',
+        defaultDate: new Date()
+    });
+
+    // 河流选择变化时获取参考值
+    document.getElementById('river_id').addEventListener('change', function() {
+        const riverId = this.value;
+        if (riverId) {
+            fetch(`/api/rivers/${riverId}/latest-flow`)
+                .then(response => response.json())
+                .then(data => {
+                    const refElement = document.getElementById('referenceFlow');
+                    refElement.textContent = data.flow_rate ? data.flow_rate.toFixed(2) : '暂无';
+                    refElement.className = data.flow_rate ? 'fw-bold text-success' : 'fw-bold text-muted';
+                });
+        }
+    });
+
+    // 表单提交前验证
+    document.getElementById('flowForm').addEventListener('submit', function(e) {
+        const flowRate = parseFloat(document.getElementById('flow_rate').value);
+        if (flowRate > 10000) {
+            if (!confirm('您输入的流量值异常偏高（>10000m³/s），确认提交吗？')) {
+                e.preventDefault();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}降雨量阈值管理{% endblock %}
+{% block header %}
+    <h2>降雨量阈值管理</h2>
+    <a href="{{ url_for('rainfall_threshold.create_threshold') }}" class="btn-add">新增阈值</a>
+{% endblock %}
+
+{% block content %}
+    <div class="table-container">
+        <div class="filter-bar">
+            <form method="get" class="filter-form">
+                <select name="basin_id" class="filter-select" onchange="this.form.submit()">
+                    <option value="">全部流域</option>
+                    {% for basin in basins %}
+                    <option value="{{ basin.basin_id }}" {% if basin.basin_id == current_basin_id %}selected{% endif %}>
+                        {{ basin.name }} ({{ basin.region }})
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if current_basin_id %}
+                <a href="{{ url_for('rainfall_threshold.list_thresholds') }}" class="btn-filter reset">
+                    <i class="bi bi-x-lg"></i> 重置
+                </a>
+                {% endif %}
+            </form>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>流域名称</th>
+                    <th>阈值(mm)</th>
+                    <th>说明</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for threshold in thresholds.items %}
+                <tr>
+                    <td>
+                        <div class="relation-info">
+                            <strong>{{ threshold.basin.name }}</strong>
+                            <span class="relation-meta">{{ threshold.basin.region }}</span>
+                        </div>
+                    </td>
+                    <td class="numeric">
+                        {{ "%.2f"|format(threshold.threshold_value) }}
+                    </td>
+                    <td class="summary">
+                        {{ threshold.description|default('暂无说明', true)|truncate(50) }}
+                    </td>
+                    <td>
+                        {{ threshold.created_at.strftime('%Y-%m-%d') }}
+                    </td>
+                    <td class="actions">
+                        <a href="{{ url_for('rainfall_threshold.edit_threshold', threshold_id=threshold.threshold_id) }}"
+                           class="btn-edit">编辑</a>
+                        <button class="btn-delete"
+                                onclick="showDeleteModal('{{ threshold.threshold_id }}', '{{ threshold.basin.name }}', '{{ "%.2f"|format(threshold.threshold_value) }}')">
+                            删除
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="no-data">
+                        <i class="bi bi-database-exclamation"></i> 没有找到阈值配置
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if thresholds.pages > 1 %}
+        <div class="pagination">
+            {{ render_pagination(thresholds, 'rainfall_threshold.list_thresholds',
+                               basin_id=current_basin_id) }}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 删除确认模态框 (默认隐藏) -->
+    <div id="deleteModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4>确认删除阈值</h4>
+                <span class="close" onclick="hideDeleteModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="warning-message">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    您正在删除 <strong id="modal-basin-name"></strong> 的降雨量阈值
+                </div>
+                <div class="modal-details">
+                    <div>
+                        <small>阈值数值</small>
+                        <div id="modal-threshold-value"></div>
+                    </div>
+                </div>
+                <div class="warning-note">
+                    <i class="bi bi-info-circle"></i>
+                    删除后将影响关联的降雨预警功能
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="hideDeleteModal()" class="btn-cancel">取消</button>
+                <form id="deleteForm" method="POST">
+                    <button type="submit" class="btn-confirm-delete">确认删除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showDeleteModal(thresholdId, basinName, thresholdValue) {
+            document.getElementById('modal-basin-name').textContent = basinName;
+            document.getElementById('modal-threshold-value').textContent = thresholdValue + ' mm';
+            document.getElementById('deleteForm').action =
+                '/rainfall_threshold/delete_threshold/' + thresholdId;
+            document.getElementById('deleteModal').style.display = 'block';
+        }
+
+        function hideDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+        }
+
+        // 点击模态框外部关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('deleteModal');
+            if (event.target == modal) {
+                hideDeleteModal();
+            }
+        }
+    </script>
+{% endblock %}

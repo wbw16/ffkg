@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}气象站列表{% endblock %}
+{% block header %}
+    <h2>气象监测站点</h2>
+    <a href="{{ url_for('station.create_station') }}" class="btn-add">新建气象站</a>
+{% endblock %}
+
+{% block content %}
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>气象站ID</th>
+                    <th>站点名称</th>
+                    <th>地理坐标</th>
+                    <th>监测流域</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for station in stations %}
+                    <tr>
+                        <td>{{ station.station_id }}</td>
+                        <td>{{ station.name }}</td>
+                        <td>
+                            <span class="coordinate">纬度: {{ "%.4f"|format(station.latitude) }}°</span>
+                            <span class="coordinate">经度: {{ "%.4f"|format(station.longitude) }}°</span>
+                        </td>
+                        <td>{{ station.basin.name }}</td>
+                        <td class="actions">
+                            <a href="{{ url_for('station.edit_station', station_id=station.station_id) }}"
+                               class="btn-edit">编辑</a>
+                            <form action="{{ url_for('station.delete_station', station_id=station.station_id) }}"
+                                  method="post">
+                                <button type="submit" class="btn-delete">删除</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="no-data">暂无气象站数据</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
