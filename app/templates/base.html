@@ -1,10 +1,813 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
+
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>水利知识平台 - {% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+    <!-- DataTables CSS -->
+    <link href="https://cdn.datatables.net/1.11.3/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 </head>
-<body>
-$END$
+
+<body class="water-has-nav">
+
+<!-- 导航栏 -->
+<nav class="water-nav" id="waterNav">
+    <div class="water-nav-header">
+        <a href="{{ url_for('main.index') }}" class="water-nav-brand">
+            <i class="bi bi-droplet"></i>
+            <span>水利知识平台</span>
+        </a>
+
+        <!-- 新增的API相关按钮 -->
+        <div class="water-nav-api-buttons">
+             <!-- 知识图谱按钮 -->
+            <a href="{{ url_for('main.knowledge_graph') }}" class="api-nav-button" title="知识图谱可视化">
+                <i class="bi bi-diagram-3"></i>
+                <span class="api-button-text">知识图谱</span>
+            </a>
+
+            <!-- 智能问答按钮 -->
+            <a href="{{ url_for('chat.index') }}" class="api-nav-button" title="智能问答机器人">
+                <i class="bi bi-robot"></i>
+                <span class="api-button-text">智能问答</span>
+            </a>
+
+            <!-- Neo4j索引按钮 -->
+            <a href="{{ url_for('neo4j.index') }}" class="api-nav-button" title="Neo4j索引接口">
+                <i class="bi bi-hdd-network"></i>
+                <span class="api-button-text">Neo4j</span>
+            </a>
+
+            <!-- 系统状态按钮 -->
+            <a href="{{ url_for('status.status_page') }}" class="api-nav-button" title="系统状态监测">
+                <i class="bi bi-heart-pulse"></i>
+                <span class="api-button-text">Status</span>
+            </a>
+
+
+        </div>
+
+        <!-- 用户登录状态区域 -->
+        <div class="user-auth-area">
+            {% if current_user.is_authenticated %}
+            <div class="user-dropdown">
+                <button class="user-profile">
+                    <div class="user-avatar">
+                        {{ current_user.username[0]|upper }}
+                    </div>
+                    <span class="user-name">{{ current_user.username }}</span>
+                    {% if current_user.is_admin %}
+                    <span class="admin-badge">Admin</span>
+                    {% endif %}
+                    <i class="bi bi-chevron-down ml-1"></i>
+                </button>
+                <div class="dropdown-menu">
+                    <div class="dropdown-header">用户中心</div>
+                    <a href="{{ url_for('auth.profile') }}" class="dropdown-item">
+                        <i class="bi bi-person"></i> 个人资料
+                    </a>
+                    <a href="{{ url_for('auth.change_password') }}" class="dropdown-item">
+                        <i class="bi bi-gear"></i> 账户设置
+                    </a>
+                    {% if current_user.is_admin %}
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-header">管理面板</div>
+                    <a href="{{ url_for('admin.users') }}" class="dropdown-item">
+                        <i class="bi bi-people"></i> 用户管理
+                    </a>
+                    <a href="{{ url_for('admin.dashboard') }}" class="dropdown-item">
+                        <i class="bi bi-speedometer2"></i> 系统仪表盘
+                    </a>
+                    {% endif %}
+                    <div class="dropdown-divider"></div>
+                    <a href="{{ url_for('auth.logout') }}" class="dropdown-item">
+                        <i class="bi bi-box-arrow-right"></i> 注销登录
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <a href="{{ url_for('auth.login') }}" class="login-button">
+                <i class="bi bi-box-arrow-in-right"></i>
+                <span>登录</span>
+            </a>
+            {% endif %}
+        </div>
+
+        <button class="water-nav-toggle" id="waterNavToggle">
+            <i class="bi bi-list"></i>
+        </button>
+    </div>
+
+    <div class="water-nav-links">
+        <!-- 基础管理 -->
+        <div class="water-nav-group">
+            <div class="water-nav-group-header collapsed" id="waterNavGroup1">
+                <i class="bi bi-gear"></i>
+                <span>基础管理</span>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="water-nav-content">
+                <a href="{{ url_for('main.index') }}"
+                   class="water-nav-link {% if request.path == '/' %}active{% endif %}">
+                    <i class="bi bi-house"></i>首页
+                </a>
+                <a href="{{ url_for('basin.list_basins') }}"
+                   class="water-nav-link {% if request.blueprint == 'basin' %}active{% endif %}">
+                    <i class="bi bi-map"></i>流域管理
+                </a>
+                <a href="{{ url_for('river.list_rivers') }}"
+                   class="water-nav-link {% if request.blueprint == 'river' %}active{% endif %}">
+                    <i class="bi bi-water"></i>河流管理
+                </a>
+                <a href="{{ url_for('reservoir.list_reservoirs') }}"
+                   class="water-nav-link {% if request.blueprint == 'reservoir' %}active{% endif %}">
+                    <i class="bi bi-droplet"></i>水库管理
+                </a>
+                <a href="{{ url_for('facility.list_facilities') }}"
+                   class="water-nav-link {% if request.blueprint == 'facility' %}active{% endif %}">
+                    <i class="bi bi-shield-check"></i>防洪设施
+                </a>
+                <a href="{{ url_for('station.list_stations') }}"
+                   class="water-nav-link {% if request.blueprint == 'station' %}active{% endif %}">
+                    <i class="bi bi-cloud-sun"></i>气象监测
+                </a>
+                <a href="{{ url_for('monitor.list_monitors') }}"
+                   class="water-nav-link {% if request.blueprint == 'monitor' %}active{% endif %}">
+                    <i class="bi bi-speedometer2"></i>水文监测站
+                </a>
+            </div>
+        </div>
+
+        <!-- 监测与预警 -->
+        <div class="water-nav-group">
+            <div class="water-nav-group-header collapsed" id="waterNavGroup2">
+                <i class="bi bi-graph-up"></i>
+                <span>监测与预警</span>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="water-nav-content">
+                <a href="{{ url_for('alert.list_alerts') }}"
+                   class="water-nav-link {% if request.blueprint == 'alert' %}active{% endif %}">
+                    <i class="bi bi-exclamation-triangle"></i>警报管理
+                </a>
+                <a href="{{ url_for('precip.list_precipitation') }}"
+                   class="water-nav-link {% if request.blueprint == 'precip' %}active{% endif %}">
+                    <i class="bi bi-cloud-rain"></i>降水数据
+                </a>
+                <a href="{{ url_for('reservoir_release.list_releases') }}"
+                   class="water-nav-link {% if request.blueprint == 'reservoir_release' %}active{% endif %}">
+                    <i class="bi bi-valve"></i>水库泄洪
+                </a>
+                <a href="{{ url_for('river_flow.list_flows') }}"
+                   class="water-nav-link {% if request.blueprint == 'river_flow' %}active{% endif %}">
+                    <i class="bi bi-arrow-left-right"></i>河流流量
+                </a>
+                <a href="{{ url_for('water_level.list_water_levels') }}"
+                   class="water-nav-link {% if request.blueprint == 'water_level' %}active{% endif %}">
+                    <i class="bi bi-thermometer-half"></i>水位数据
+                </a>
+                <a href="{{ url_for('historical_flood.list_floods') }}"
+                   class="water-nav-link {% if request.blueprint == 'historical_flood' %}active{% endif %}">
+                    <i class="bi bi-archive"></i>历史洪水
+                </a>
+                <a href="{{ url_for('flood_control.list_strategies') }}"
+                   class="water-nav-link {% if request.blueprint == 'flood_control' %}active{% endif %}">
+                    <i class="bi bi-shield"></i>防洪措施
+                </a>
+                <a href="{{ url_for('rainfall_threshold.list_thresholds') }}"
+                   class="water-nav-link {% if request.blueprint == 'rainfall_threshold' %}active{% endif %}">
+                    <i class="bi bi-cloud-lightning-rain"></i>降雨阈值
+                </a>
+                <a href="{{ url_for('water_level_threshold.list_thresholds') }}"
+                   class="water-nav-link {% if request.blueprint == 'water_level_threshold' %}active{% endif %}">
+                    <i class="bi bi-water"></i>水位阈值
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- 遮罩层 -->
+<div class="water-nav-overlay" id="waterNavOverlay"></div>
+
+<!-- 页面内容区域 -->
+<div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+<!--    <header class="page-header">-->
+<!--        <h1 class="mb-4">-->
+<!--            {% block header %}{% endblock %}-->
+<!--        </h1>-->
+<!--    </header>-->
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+<!-- 页脚 -->
+<footer class="bg-light py-4 mt-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <h5 class="mb-3">水利知识平台</h5>
+                <p class="text-muted">
+                    提供全面的水利信息管理与监测预警服务，助力水利信息化建设。
+                </p>
+            </div>
+            <div class="col-md-3">
+                <h5 class="mb-3">快速链接</h5>
+                <ul class="list-unstyled">
+                    <li><a href="{{ url_for('main.index') }}" class="text-decoration-none">首页</a></li>
+                    <li><a href="{{ url_for('main.about') }}" class="text-decoration-none">关于我们</a></li>
+
+                </ul>
+            </div>
+            <div class="col-md-3">
+                <h5 class="mb-3">技术支持</h5>
+                <ul class="list-unstyled">
+                    <li><a href="{{ url_for('main.debug_routes') }}" class="text-decoration-none">API文档</a></li>
+                    <li><a href="{{ url_for('status.status_page') }}" class="text-decoration-none">系统状态</a></li>
+                </ul>
+            </div>
+        </div>
+        <hr>
+        <div class="text-center text-muted">
+            <small>© 2025 60w3n水利知识平台. 保留所有权利.</small>
+        </div>
+    </div>
+</footer>
+
+<!-- JavaScript 库 -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // 动态添加样式
+        const style = document.createElement('style');
+        style.textContent = `
+                :root {
+                    --primary-color: #ffffff;
+                    --secondary-color: #2ecc71;
+                    --dark-color: #2c3e50;
+                    --light-color: #ecf0f1;
+                    --danger-color: #e74c3c;
+                    --warning-color: #f39c12;
+                    --info-color: #1abc9c;
+                    --nav-bg: #ffffff;
+                    --nav-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                    --nav-height: 100px;
+                    --transition-speed: 0.3s;
+                }
+
+                /* 完全隔离的导航栏样式 */
+                .water-nav {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    background: var(--nav-bg);
+                    box-shadow: var(--nav-shadow);
+                    z-index: 1000;
+                    height: var(--nav-height);
+                    overflow: visible; /* 允许内容溢出 */
+                    transition: all var(--transition-speed) ease;
+                    height: 70px; /* 从100px减小到60px */
+
+                }
+
+                .water-nav.expanded {
+                    height: auto;
+                    max-height: 80vh;
+                    overflow-y: auto;
+                }
+
+                .water-nav-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-bottom: 1px solid #eee;
+                    height: 60px; /* 与导航栏高度一致 */
+                    padding: 0 15px; /* 减小左右内边距 */
+                    border-bottom: none; /* 移除底部边框 */
+                }
+
+                .water-nav-brand {
+                    display: flex;
+                    align-items: center;
+                    font-size: 1.4rem;
+                    font-weight: 600;
+                    color: var(--dark-color);
+                    text-decoration: none;
+                }
+
+                .water-nav-brand i {
+                    color: var(--info-color);
+                    margin-right: 10px;
+                    font-size: 1.6rem;
+                }
+
+                .water-nav-toggle {
+                    background: none;
+                    border: none;
+                    font-size: 1.5rem;
+                    color: #6c757d;
+                    cursor: pointer;
+                    padding: 5px;
+                    transition: all 0.3s ease; /* 所有属性都添加过渡 */
+                    border-radius: 50%; /* 圆形背景 */
+                    width: 36px;
+                    height: 36px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .water-nav-toggle:hover {
+                    color: #28a745;
+                    background-color: rgba(40, 167, 69, 0.1); /* 浅绿色背景 */
+                    transform: scale(1.1); /* 轻微放大 */
+                }
+
+
+                .water-nav.expanded .water-nav-toggle {
+                    transform: rotate(90deg);
+                }
+
+                .water-nav-links {
+                    display: none;
+                    padding: 10px 0;
+                }
+
+                .water-nav.expanded .water-nav-links {
+                    display: block;
+                }
+
+                .water-nav-group {
+                    margin-bottom: 5px;
+                }
+
+                .water-nav-group-header {
+                    padding: 12px 20px;
+                    display: flex;
+                    align-items: center;
+                    cursor: pointer;
+                    color: #495057;
+                    font-weight: 500;
+                    user-select: none;
+                    transition: background-color var(--transition-speed);
+                }
+
+                .water-nav-group-header:hover {
+                    background: #f8f9fa;
+                }
+
+                .water-nav-group-header i:first-child {
+                    margin-right: 10px;
+                    color: var(--primary-color);
+                    font-size: 1.1rem;
+                }
+
+                .water-nav-group-header .bi-chevron-down {
+                    margin-left: auto;
+                    transition: transform var(--transition-speed);
+                    font-size: 0.9rem;
+                    color: #6c757d;
+                }
+
+                .water-nav-group-header.collapsed .bi-chevron-down {
+                    transform: rotate(-90deg);
+                }
+
+                .water-nav-link {
+                    display: flex;
+                    align-items: center;
+                    padding: 10px 20px 10px 40px;
+                    color: #495057;
+                    text-decoration: none;
+                    font-size: 0.95rem;
+                    transition: all var(--transition-speed);
+                }
+
+                .water-nav-link:hover {
+                    background: #f8f9fa;
+                    padding-left: 45px;
+                }
+
+                .water-nav-link.active {
+                    background: rgba(13, 110, 253, 0.1);
+                    color: var(--primary-color);
+                    font-weight: 500;
+                }
+
+                .water-nav-link i {
+                    margin-right: 10px;
+                    font-size: 0.9rem;
+                    color: #6c757d;
+                }
+
+                .water-nav-link.active i {
+                    color: var(--primary-color);
+                }
+
+                .water-nav-content {
+                    overflow: hidden;
+                    transition: max-height var(--transition-speed) ease;
+                }
+
+                .water-nav-group-header.collapsed + .water-nav-content {
+                    max-height: 0 !important;
+                }
+
+                .water-nav-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.3);
+                    z-index: 999;
+                    opacity: 0;
+                    visibility: hidden;
+                    transition: all var(--transition-speed);
+                }
+
+                .water-nav.expanded ~ .water-nav-overlay {
+                    opacity: 1;
+                    visibility: visible;
+                }
+
+                /* 导航栏API按钮容器 */
+                .water-nav-api-buttons {
+                    display: flex;
+                    margin-left: auto;
+                    gap: 10px;
+                    align-items: center;
+                    padding-right: 15px;
+                }
+
+                /* API按钮样式 */
+                .api-nav-button {
+                    display: flex;
+                    align-items: center;
+                    padding: 8px 12px;
+                    border-radius: 6px;
+                    color: var(--dark-color);
+                    background-color: rgba(171, 215, 200, 0.2);
+                    transition: all var(--transition-speed) ease;
+                    text-decoration: none;
+                    font-size: 14px;
+                    border: 1px solid rgba(0, 0, 0, 0.1);
+                }
+
+                .api-nav-button:hover {
+                    background-color: rgba(255, 255, 255, 0.3);
+                    transform: translateY(-2px);
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                }
+
+                .api-nav-button i {
+                    margin-right: 6px;
+                    font-size: 16px;
+                }
+
+                /* 用户认证区域样式 */
+                .user-auth-area {
+                    margin-left: auto;
+                    display: flex;
+                    align-items: center;
+                    padding-right: 15px;
+                }
+
+                .login-button {
+                    display: flex;
+                    align-items: center;
+                    padding: 8px 15px;
+                    color: #fff;
+                    background-color: var(--primary-color);
+                    border-radius: 4px;
+                    text-decoration: none;
+                    transition: all var(--transition-speed);
+                    font-weight: 500;
+                }
+
+                .login-button:hover {
+                    background-color: #2980b9;
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+                }
+
+                .login-button i {
+                    margin-right: 5px;
+                }
+
+                /* 用户下拉菜单样式 */
+                .user-dropdown {
+                    position: relative;
+                }
+
+                .user-profile {
+                    display: flex;
+                    align-items: center;
+                    background: none;
+                    border: none;
+                    color: var(--dark-color);
+                    cursor: pointer;
+                    padding: 8px 15px;
+                    border-radius: 4px;
+                    transition: all var(--transition-speed);
+                    font-weight: 500;
+                }
+
+                .user-profile:hover {
+                    background-color: rgba(0, 0, 0, 0.05);
+                }
+
+                .user-avatar {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 50%;
+                    margin-right: 8px;
+                    object-fit: cover;
+                    background-color: var(--light-color);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: var(--primary-color);
+                    font-weight: bold;
+                }
+
+                .user-name {
+                    margin-right: 5px;
+                    max-width: 120px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                .admin-badge {
+                    margin-left: 5px;
+                    padding: 2px 5px;
+                    background-color: var(--danger-color);
+                    color: white;
+                    border-radius: 3px;
+                    font-size: 0.7em;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                }
+
+                .dropdown-menu {
+                    position: absolute;
+                    right: 0;
+                    top: calc(100% + 5px);
+                    background-color: #fff;
+                    min-width: 200px;
+                    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+                    border-radius: 8px;
+                    padding: 5px 0;
+                    z-index: 1000;
+                    opacity: 0;
+                    visibility: hidden;
+                    transform: translateY(10px);
+                    transition: all var(--transition-speed);
+                }
+
+                .user-dropdown:hover .dropdown-menu {
+                    opacity: 1;
+                    visibility: visible;
+                    transform: translateY(0);
+                }
+
+                .dropdown-header {
+                    padding: 8px 15px;
+                    font-size: 0.8em;
+                    color: #6c757d;
+                    text-transform: uppercase;
+                    font-weight: bold;
+                    border-bottom: 1px solid #eee;
+                }
+
+                .dropdown-item {
+                    display: flex;
+                    align-items: center;
+                    padding: 10px 15px;
+                    color: #333;
+                    text-decoration: none;
+                    transition: all var(--transition-speed);
+                    font-size: 0.9em;
+                }
+
+                .dropdown-item:hover {
+                    background-color: #f8f9fa;
+                    padding-left: 20px;
+                    color: var(--primary-color);
+                }
+
+                .dropdown-item i {
+                    margin-right: 10px;
+                    color: #6c757d;
+                    width: 18px;
+                    text-align: center;
+                }
+
+                .dropdown-item:hover i {
+                    color: var(--primary-color);
+                }
+
+                .dropdown-divider {
+                    height: 1px;
+                    background-color: #eee;
+                    margin: 5px 0;
+                }
+
+                /* 响应式设计 */
+                @media (max-width: 992px) {
+                    .water-nav-api-buttons {
+                        display: none;
+                    }
+                }
+
+                @media (max-width: 768px) {
+                    .api-button-text {
+                        display: none;
+                    }
+
+                    .api-nav-button {
+                        padding: 8px;
+                    }
+
+                    .api-nav-button i {
+                        margin-right: 0;
+                        font-size: 18px;
+                    }
+
+                    .user-name {
+                        max-width: 80px;
+                    }
+                }
+
+                /* 为内容区域添加顶部内边距 */
+                body.water-has-nav {
+                    padding-top: var(--nav-height);
+                    background-color: #f5f7fa;
+                }
+
+                /* 页面内容样式 */
+                .container {
+                    padding: 20px;
+                    max-width: 1400px;
+                }
+
+                .page-header {
+                    margin-bottom: 30px;
+                    padding-bottom: 15px;
+                    border-bottom: 1px solid #eee;
+                }
+
+                /* 消息提示样式 */
+                .alert {
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                    padding: 15px;
+                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+                }
+
+                .alert-success {
+                    background-color: #d4edda;
+                    color: #155724;
+                    border-color: #c3e6cb;
+                }
+
+                .alert-danger {
+                    background-color: #f8d7da;
+                    color: #721c24;
+                    border-color: #f5c6cb;
+                }
+
+                .alert-info {
+                    background-color: #d1ecf1;
+                    color: #0c5460;
+                    border-color: #bee5eb;
+                }
+
+                .alert-warning {
+                    background-color: #fff3cd;
+                    color: #856404;
+                    border-color: #ffeeba;
+                }
+            `;
+        document.head.appendChild(style);
+
+        // 确保DOM完全加载
+        const waterNav = document.getElementById('waterNav');
+        const waterNavToggle = document.getElementById('waterNavToggle');
+        const waterNavOverlay = document.getElementById('waterNavOverlay');
+        const waterNavGroups = document.querySelectorAll('.water-nav-group-header');
+
+        // 1. 主导航栏切换功能
+        function toggleWaterNav() {
+            waterNav.classList.toggle('expanded');
+            localStorage.setItem('waterNavExpanded', waterNav.classList.contains('expanded'));
+        }
+
+        // 2. 导航组切换功能
+        function toggleWaterNavGroup(header) {
+            header.classList.toggle('collapsed');
+            const groupName = header.querySelector('span').textContent;
+            localStorage.setItem(`waterNavGroup_${groupName}`, header.classList.contains('collapsed'));
+        }
+
+        // 3. 用户下拉菜单功能
+        function setupUserDropdowns() {
+            // 点击用户头像切换菜单
+            document.querySelectorAll('.user-profile').forEach(profile => {
+                profile.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    const dropdown = this.closest('.user-dropdown');
+                    const menu = dropdown.querySelector('.dropdown-menu');
+                    menu.classList.toggle('show');
+
+                    // 关闭其他打开的菜单
+                    document.querySelectorAll('.user-dropdown .dropdown-menu').forEach(otherMenu => {
+                        if (otherMenu !== menu) {
+                            otherMenu.classList.remove('show');
+                        }
+                    });
+                });
+            });
+
+            // 点击页面其他地方关闭所有下拉菜单
+            document.addEventListener('click', function () {
+                document.querySelectorAll('.user-dropdown .dropdown-menu').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+            });
+        }
+
+        // 4. 初始化导航状态
+        function initWaterNav() {
+            // 恢复导航栏状态
+            if (localStorage.getItem('waterNavExpanded') === 'true') {
+                waterNav.classList.add('expanded');
+            }
+
+            // 恢复导航组状态
+            waterNavGroups.forEach(header => {
+                const groupName = header.querySelector('span').textContent;
+                if (localStorage.getItem(`waterNavGroup_${groupName}`) === 'true') {
+                    header.classList.add('collapsed');
+                }
+            });
+        }
+
+        // 5. 消息提示框关闭功能
+        function setupAlertDismiss() {
+            document.querySelectorAll('.btn-close').forEach(button => {
+                button.addEventListener('click', function () {
+                    this.closest('.alert').style.display = 'none';
+                });
+            });
+        }
+
+        // 添加事件监听
+        waterNavToggle.addEventListener('click', toggleWaterNav);
+        waterNavOverlay.addEventListener('click', toggleWaterNav);
+
+        waterNavGroups.forEach(header => {
+            header.addEventListener('click', function () {
+                toggleWaterNavGroup(header);
+            });
+        });
+
+        // 初始化所有功能
+        initWaterNav();
+        setupUserDropdowns();
+        setupAlertDismiss();
+    });
+</script>
 </body>
+
 </html>

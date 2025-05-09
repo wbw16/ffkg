@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+  <h2 class="my-4">
+    {% if form.id.data %}编辑用户{% else %}添加用户{% endif %}
+  </h2>
+
+  <div class="card shadow mb-4">
+    <div class="card-header py-3">
+      <h6 class="m-0 font-weight-bold text-primary">用户信息</h6>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="">
+        {{ form.hidden_tag() }}
+
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            {{ form.username.label(class="font-weight-bold") }}
+            {{ form.username(class="form-control", placeholder="输入用户名") }}
+            {% for error in form.username.errors %}
+              <small class="text-danger">{{ error }}</small>
+            {% endfor %}
+          </div>
+
+          <div class="form-group col-md-6">
+            {{ form.email.label(class="font-weight-bold") }}
+            {{ form.email(class="form-control", placeholder="输入邮箱") }}
+            {% for error in form.email.errors %}
+              <small class="text-danger">{{ error }}</small>
+            {% endfor %}
+          </div>
+        </div>
+
+        {% if not form.id.data %}
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            {{ form.password.label(class="font-weight-bold") }}
+            {{ form.password(class="form-control", placeholder="输入密码") }}
+            {% for error in form.password.errors %}
+              <small class="text-danger">{{ error }}</small>
+            {% endfor %}
+          </div>
+
+          <div class="form-group col-md-6">
+            {{ form.confirm_password.label(class="font-weight-bold") }}
+            {{ form.confirm_password(class="form-control", placeholder="确认密码") }}
+            {% for error in form.confirm_password.errors %}
+              <small class="text-danger">{{ error }}</small>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="custom-control custom-switch" style="margin-bottom: 0.5rem;">
+                {{ form.is_admin(class="custom-control-input", id="isAdminSwitch") }}
+                {{ form.is_admin.label(class="custom-control-label font-weight-bold", for="isAdminSwitch") }}
+                <small class="form-text text-muted d-block">管理员权限</small>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="custom-control custom-switch" style="margin-bottom: 0.5rem;">
+                {{ form.active(class="custom-control-input", id="activeSwitch") }}
+                {{ form.active.label(class="custom-control-label font-weight-bold", for="activeSwitch") }}
+                <small class="form-text text-muted d-block">激活状态</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+        <div class="form-group">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> 保存
+          </button>
+          <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> 返回
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

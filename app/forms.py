@@ -1,10 +1,71 @@
 from datetime import datetime
 
 from flask_wtf import FlaskForm
-from wtforms import SelectField, TextAreaField, StringField
+from wtforms import SelectField, TextAreaField, StringField,HiddenField
 from wtforms.validators import DataRequired, Length, ValidationError
 from wtforms import DecimalField, DateTimeField
 from wtforms.validators import DataRequired, NumberRange
+from app.models import User
+from wtforms import StringField, PasswordField, BooleanField, SubmitField
+from wtforms.validators import DataRequired, Email, EqualTo, ValidationError
+
+class ProfileForm(FlaskForm):
+    username = StringField('用户名', validators=[DataRequired(), Length(min=4, max=64)])
+    email = StringField('邮箱', validators=[DataRequired(), Email()])
+
+class ChangePasswordForm(FlaskForm):
+    current_password = PasswordField('当前密码', validators=[DataRequired()])
+    new_password = PasswordField('新密码', validators=[
+        DataRequired(),
+        Length(min=8, message='密码至少需要8个字符')
+    ])
+    confirm_password = PasswordField('确认新密码', validators=[
+        DataRequired(),
+        EqualTo('new_password', message='两次输入的密码必须一致')
+    ])
+class CreateUserForm(FlaskForm):
+    id = HiddenField('ID')
+    username = StringField('用户名', validators=[
+        DataRequired(),
+        Length(min=3, max=20, message='用户名长度3-20个字符')
+    ])
+    password = PasswordField('密码', validators=[
+        DataRequired(),
+        Length(min=8, message='密码至少8位字符'),
+        EqualTo('confirm_password', message='两次密码必须一致')
+    ])
+    confirm_password = PasswordField('确认密码')
+    is_admin = BooleanField('管理员权限')
+    submit = SubmitField('创建用户')
+
+class LoginForm(FlaskForm):
+    username = StringField('用户名', validators=[DataRequired(), Length(1, 64)])
+    password = PasswordField('密码', validators=[DataRequired()])
+    remember_me = BooleanField('记住我')
+    submit = SubmitField('登录')
+
+class UserForm(FlaskForm):
+    id = HiddenField('ID')  # 添加这行
+    username = StringField('用户名', validators=[DataRequired()])
+    email = StringField('邮箱', validators=[DataRequired(), Email()])
+    password = PasswordField('密码', validators=[
+        DataRequired(),
+        EqualTo('confirm_password', message='两次输入的密码必须一致')
+    ])
+    confirm_password = PasswordField('确认密码')
+    is_admin = BooleanField('管理员')
+    active = BooleanField('激活状态', default=True)
+    submit = SubmitField('保存')
+
+    def validate_username(self, username):
+        user = User.query.filter_by(username=username.data).first()
+        if user and (not hasattr(self, 'id') or (hasattr(self, 'id') and user.id != self.id.data)):
+            raise ValidationError('该用户名已被使用')
+
+    def validate_email(self, email):
+        user = User.query.filter_by(email=email.data).first()
+        if user and (not hasattr(self, 'id') or (hasattr(self, 'id') and user.id != self.id.data)):
+            raise ValidationError('该邮箱已被使用')
 
 class AlertForm(FlaskForm):
     river_id = SelectField(

@@ -1,278 +1,382 @@
 {% extends "base.html" %}
 
-{% block title %}服务器状态{% endblock %}
+{% block title %}系统状态监控{% endblock %}
 
 {% block content %}
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-    <style>
-        .card { margin-bottom: 20px; }
-        .progress { height: 25px; }
-        .progress-bar { font-size: 14px; line-height: 25px; }
-        .chart-container { height: 300px; }
-        .table-container { max-height: 400px; overflow-y: auto; }
-    </style>
-    <div class="container-fluid py-4">
-        <h1 class="text-center mb-4">服务器状态监控</h1>
+<div class="container mt-4">
+    <h2 class="mb-4 text-center text-dark">系统状态监控</h2>
 
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="card-title mb-0">系统信息</h5>
-                    </div>
-                    <div class="card-body">
-                        <p><strong>系统:</strong> <span id="system-name">-</span></p>
-                        <p><strong>主机名:</strong> <span id="system-node">-</span></p>
-                        <p><strong>版本:</strong> <span id="system-version">-</span></p>
-                        <p><strong>启动时间:</strong> <span id="system-boot-time">-</span></p>
-                        <p><strong>最后更新:</strong> <span id="system-timestamp">-</span></p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="card-title mb-0">CPU 状态</h5>
-                    </div>
-                    <div class="card-body">
-                        <p><strong>使用率:</strong></p>
-                        <div class="progress">
-                            <div id="cpu-progress" class="progress-bar progress-bar-striped" role="progressbar" style="width: 0%">0%</div>
-                        </div>
-                        <p class="mt-2"><strong>物理核心:</strong> <span id="cpu-count">-</span></p>
-                        <p><strong>逻辑核心:</strong> <span id="cpu-count-logical">-</span></p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="card-title mb-0">内存状态</h5>
-                    </div>
-                    <div class="card-body">
-                        <p><strong>使用率:</strong></p>
-                        <div class="progress">
-                            <div id="memory-progress" class="progress-bar progress-bar-striped bg-warning" role="progressbar" style="width: 0%">0%</div>
-                        </div>
-                        <p class="mt-2"><strong>已用:</strong> <span id="memory-used">-</span> GB / <span id="memory-total">-</span> GB</p>
-                    </div>
-                </div>
-            </div>
+    <!-- 系统概览 -->
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-header bg-white border-0 py-3">
+            <h5 class="card-title mb-0 text-dark">
+                <i class="bi bi-speedometer2 me-2"></i>系统概览
+            </h5>
         </div>
-
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header bg-danger text-white">
-                        <h5 class="card-title mb-0">磁盘状态</h5>
-                    </div>
-                    <div class="card-body">
-                        <p><strong>使用率 (根分区):</strong></p>
-                        <div class="progress">
-                            <div id="disk-progress" class="progress-bar progress-bar-striped bg-danger" role="progressbar" style="width: 0%">0%</div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 border-end">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-pc-display fs-4 text-primary me-3"></i>
+                        <div>
+                            <p class="mb-0 text-muted small">主机名</p>
+                            <p class="mb-0 fw-bold">{{ system_info.hostname }}</p>
                         </div>
-                        <p class="mt-2"><strong>已用:</strong> <span id="disk-used">-</span> GB / <span id="disk-total">-</span> GB</p>
-                        <div id="disk-chart" class="chart-container"></div>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-ethernet fs-4 text-primary me-3"></i>
+                        <div>
+                            <p class="mb-0 text-muted small">IP地址</p>
+                            <p class="mb-0 fw-bold">{{ system_info.ip_address }}</p>
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="card-title mb-0">网络状态</h5>
+                <div class="col-md-3 border-end">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-windows fs-4 text-primary me-3"></i>
+                        <div>
+                            <p class="mb-0 text-muted small">操作系统</p>
+                            <p class="mb-0 fw-bold">{{ system_info.os }}</p>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <p><strong>发送:</strong> <span id="network-sent">-</span> MB</p>
-                        <p><strong>接收:</strong> <span id="network-recv">-</span> MB</p>
-                        <div id="network-chart" class="chart-container"></div>
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-code-slash fs-4 text-primary me-3"></i>
+                        <div>
+                            <p class="mb-0 text-muted small">运行环境</p>
+                            <p class="mb-0 fw-bold">{{ system_info.environment }}</p>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header bg-dark text-white">
-                        <h5 class="card-title mb-0">进程状态 (Top 10 by CPU)</h5>
+                <div class="col-md-3 border-end">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-filetype-py fs-4 text-primary me-3"></i>
+                        <div>
+                            <p class="mb-0 text-muted small">Python版本</p>
+                            <p class="mb-0 fw-bold">{{ system_info.python_version }}</p>
+                        </div>
                     </div>
-                    <div class="card-body table-container">
-                        <table class="table table-striped table-hover">
-                            <thead>
-                                <tr>
-                                    <th>PID</th>
-                                    <th>名称</th>
-                                    <th>用户</th>
-                                    <th>CPU %</th>
-                                    <th>内存 %</th>
-                                </tr>
-                            </thead>
-                            <tbody id="process-table">
-                                <!-- 进程数据将通过JavaScript动态填充 -->
-                            </tbody>
-                        </table>
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-filetype-jsx fs-4 text-primary me-3"></i>
+                        <div>
+                            <p class="mb-0 text-muted small">Flask版本</p>
+                            <p class="mb-0 fw-bold">{{ system_info.flask_version }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-clock-history fs-4 text-primary me-3"></i>
+                        <div>
+                            <p class="mb-0 text-muted small">运行时间</p>
+                            <p class="mb-0 fw-bold">{{ (resource_usage.uptime//3600) }}小时 {{
+                                (resource_usage.uptime%3600)//60 }}分钟</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-calendar3 fs-4 text-primary me-3"></i>
+                        <div>
+                            <p class="mb-0 text-muted small">当前时间</p>
+                            <p class="mb-0 fw-bold">{{ system_info.now.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        // 初始化图表
-        const diskChart = echarts.init(document.getElementById('disk-chart'));
-        const networkChart = echarts.init(document.getElementById('network-chart'));
+    <!-- 资源使用情况 -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="card-title mb-0 text-dark">
+                        <i class="bi bi-cpu me-2"></i>CPU使用率
+                    </h5>
+                </div>
+                <div class="card-body text-center py-4">
+                    <div class="position-relative d-inline-block mb-3">
+                        <svg width="120" height="120" viewBox="0 0 36 36" class="circular-chart">
+                            <path class="circle-bg"
+                                  d="M18 2.0845
+                                    a 15.9155 15.9155 0 0 1 0 31.831
+                                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                                  fill="none"
+                                  stroke="#eee"
+                                  stroke-width="3"/>
+                            <path class="circle-fill"
+                                  stroke-dasharray="{{ resource_usage.cpu }},100"
+                                  d="M18 2.0845
+                                    a 15.9155 15.9155 0 0 1 0 31.831
+                                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                                  fill="none"
+                                  stroke="{% if resource_usage.cpu > 80 %}#dc3545{% elif resource_usage.cpu > 60 %}#ffc107{% else %}#28a745{% endif %}"
+                                  stroke-width="3"
+                                  stroke-linecap="round"/>
+                            <text x="18" y="20" class="percentage" text-anchor="middle" dy=".3em" fill="#333"
+                                  font-size="8">{{ resource_usage.cpu }}%
+                            </text>
+                        </svg>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-{% if resource_usage.cpu > 80 %}danger{% elif resource_usage.cpu > 60 %}warning{% else %}success{% endif %}"
+                             role="progressbar" style="width: {{ resource_usage.cpu }}%">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 内存使用情况卡片 -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="card-title mb-0 text-dark">
+                        <i class="bi bi-memory me-2"></i>内存使用率
+                    </h5>
+                </div>
+                <div class="card-body text-center py-4">
+                    <div class="position-relative d-inline-block mb-3">
+                        <svg width="120" height="120" viewBox="0 0 36 36" class="circular-chart">
+                            <path class="circle-bg"
+                                  d="M18 2.0845
+                            a 15.9155 15.9155 0 0 1 0 31.831
+                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                                  fill="none"
+                                  stroke="#eee"
+                                  stroke-width="3"/>
+                            <path class="circle-fill"
+                                  stroke-dasharray="{{ resource_usage.memory }},100"
+                                  d="M18 2.0845
+                            a 15.9155 15.9155 0 0 1 0 31.831
+                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                                  fill="none"
+                                  stroke="{% if resource_usage.memory > 80 %}#dc3545{% elif resource_usage.memory > 60 %}#ffc107{% else %}#28a745{% endif %}"
+                                  stroke-width="3"
+                                  stroke-linecap="round"/>
+                            <text x="18" y="20" class="percentage" text-anchor="middle" dy=".3em" fill="#333"
+                                  font-size="8">{{ resource_usage.memory }}%
+                            </text>
+                        </svg>
+                    </div>
 
-        // 磁盘图表配置
-        const diskChartOption = {
-            tooltip: {
-                trigger: 'item'
-            },
-            series: [{
-                name: '磁盘使用',
-                type: 'pie',
-                radius: ['40%', '70%'],
-                avoidLabelOverlap: false,
-                itemStyle: {
-                    borderRadius: 10,
-                    borderColor: '#fff',
-                    borderWidth: 2
-                },
-                label: {
-                    show: false,
-                    position: 'center'
-                },
-                emphasis: {
-                    label: {
-                        show: true,
-                        fontSize: '18',
-                        fontWeight: 'bold'
-                    }
-                },
-                labelLine: {
-                    show: false
-                },
-                data: [
-                    { value: 0, name: '已用' },
-                    { value: 100, name: '可用' }
-                ]
-            }]
-        };
+                    <!-- 新增内存具体信息 -->
+                   <div class="memory-details mb-3">
+    <div class="d-flex justify-content-between small text-muted">
+        <span>已用内存:</span>
+        <span class="fw-bold">{{ resource_usage.memory_used_gb }} GB ({{ "%.2f"|format(resource_usage.memory_used_bytes/1024/1024) }} MB)</span>
+    </div>
+    <div class="d-flex justify-content-between small text-muted">
+        <span>总内存:</span>
+        <span class="fw-bold">{{ resource_usage.memory_total_gb }} GB ({{ "%.2f"|format(resource_usage.memory_total_bytes/1024/1024) }} MB)</span>
+    </div>
+    <div class="d-flex justify-content-between small text-muted">
+        <span>可用内存:</span>
+        <span class="fw-bold">{{ resource_usage.memory_available_gb }} GB ({{ "%.2f"|format(resource_usage.memory_available_bytes/1024/1024) }} MB)</span>
+    </div>
+</div>
 
-        // 网络图表配置
-        const networkChartOption = {
-            tooltip: {
-                trigger: 'axis',
-                axisPointer: {
-                    type: 'shadow'
-                }
-            },
-            xAxis: {
-                type: 'value'
-            },
-            yAxis: {
-                type: 'category',
-                data: ['发送', '接收']
-            },
-            series: [{
-                name: '网络流量',
-                type: 'bar',
-                data: [0, 0],
-                itemStyle: {
-                    color: function(params) {
-                        const colorList = ['#5470C6', '#91CC75'];
-                        return colorList[params.dataIndex];
-                    }
-                }
-            }]
-        };
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-{% if resource_usage.memory > 80 %}danger{% elif resource_usage.memory > 60 %}warning{% else %}success{% endif %}"
+                             role="progressbar" style="width: {{ resource_usage.memory }}%">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="card-title mb-0 text-dark">
+                        <i class="bi bi-hdd me-2"></i>磁盘使用率
+                    </h5>
+                </div>
+                <div class="card-body py-3">
+                    {% for disk in resource_usage.disk %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted small">{{ disk.mountpoint }}</span>
+                            <span class="fw-bold">{{ disk.percent }}%</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-{% if disk.percent > 80 %}danger{% elif disk.percent > 60 %}warning{% else %}success{% endif %}"
+                                 role="progressbar" style="width: {{ disk.percent }}%">
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
 
-        diskChart.setOption(diskChartOption);
-        networkChart.setOption(networkChartOption);
+    <!-- 服务状态 -->
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-header bg-white border-0 py-3">
+            <h5 class="card-title mb-0 text-dark">
+                <i class="bi bi-server me-2"></i>服务状态
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for name, data in services.items() %}
+                <div class="col-md-4 mb-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white border-0 py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="bi bi-{% if name == 'MySQL' %}database{% elif name == 'Neo4j' %}diagram-3{% else %}memory{% endif %} fs-4 text-{% if data.healthy %}success{% else %}danger{% endif %}"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 text-dark">{{ name }}</h6>
+                                    <span class="badge bg-{% if data.healthy %}success{% else %}danger{% endif %} small">{{ data.status }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body pt-0">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">版本</span>
+                                <span class="fw-bold small">{{ data.version }}</span>
+                            </div>
+                            {% if data.uptime %}
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">运行时间</span>
+                                <span class="fw-bold small">{{ (data.uptime//3600) }}小时 {{ (data.uptime%3600)//60 }}分钟</span>
+                            </div>
+                            {% endif %}
+                            {% if not data.healthy %}
+                            <div class="alert alert-danger small mb-0 mt-2 p-2">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                {{ data.error }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
 
-        // 更新数据函数
-        function updateSystemInfo() {
-            fetch('/api/system_info')
-                .then(response => response.json())
-                .then(data => {
-                    // 更新系统信息
-                    document.getElementById('system-name').textContent = `${data.system.info.system} ${data.system.info.release}`;
-                    document.getElementById('system-node').textContent = data.system.info.node;
-                    document.getElementById('system-version').textContent = data.system.info.version;
-                    document.getElementById('system-boot-time').textContent = data.system.boot_time;
-                    document.getElementById('system-timestamp').textContent = data.timestamp;
+    <!-- 最近事件 -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 py-3">
+            <h5 class="card-title mb-0 text-dark">
+                <i class="bi bi-list-check me-2"></i>最近事件
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th class="py-3">时间</th>
+                        <th class="py-3">事件</th>
+                        <th class="py-3">级别</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for event in events %}
+                    <tr>
+                        <td class="py-3">{{ event.time }}</td>
+                        <td class="py-3">{{ event.event }}</td>
+                        <td class="py-3">
+                                <span class="badge rounded-pill bg-{% if event.level == 'error' %}danger{% elif event.level == 'warning' %}warning{% else %}success{% endif %}">
+                                    <i class="bi bi-{% if event.level == 'error' %}exclamation-circle{% elif event.level == 'warning' %}exclamation-triangle{% else %}check-circle{% endif %} me-1"></i>
+                                    {{ event.level }}
+                                </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-                    // 更新CPU信息
-                    document.getElementById('cpu-progress').style.width = `${data.cpu.percent}%`;
-                    document.getElementById('cpu-progress').textContent = `${data.cpu.percent}%`;
-                    document.getElementById('cpu-count').textContent = data.cpu.count;
-                    document.getElementById('cpu-count-logical').textContent = data.cpu.count_logical;
+{% block styles %}
+{{ super() }}
+<style>
+    .circular-chart {
+        display: block;
+        margin: 0 auto;
+    }
 
-                    // 更新内存信息
-                    document.getElementById('memory-progress').style.width = `${data.memory.percent}%`;
-                    document.getElementById('memory-progress').textContent = `${data.memory.percent}%`;
-                    document.getElementById('memory-used').textContent = data.memory.used;
-                    document.getElementById('memory-total').textContent = data.memory.total;
+    .circle-bg {
+        fill: none;
+    }
 
-                    // 更新磁盘信息
-                    document.getElementById('disk-progress').style.width = `${data.disk.percent}%`;
-                    document.getElementById('disk-progress').textContent = `${data.disk.percent}%`;
-                    document.getElementById('disk-used').textContent = data.disk.used;
-                    document.getElementById('disk-total').textContent = data.disk.total;
+    .circle-fill {
+        fill: none;
+        animation: progress 1s ease-out forwards;
+    }
 
-                    // 更新磁盘图表
-                    diskChart.setOption({
-                        series: [{
-                            data: [
-                                { value: data.disk.percent, name: '已用' },
-                                { value: 100 - data.disk.percent, name: '可用' }
-                            ]
-                        }]
-                    });
-
-                    // 更新网络信息
-                    document.getElementById('network-sent').textContent = data.network.sent;
-                    document.getElementById('network-recv').textContent = data.network.recv;
-
-                    // 更新网络图表
-                    networkChart.setOption({
-                        series: [{
-                            data: [data.network.sent, data.network.recv]
-                        }]
-                    });
-
-                    // 更新进程表格
-                    const processTable = document.getElementById('process-table');
-                    processTable.innerHTML = '';
-                    data.processes.forEach(proc => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${proc.pid}</td>
-                            <td>${proc.name}</td>
-                            <td>${proc.username}</td>
-                            <td>${proc.cpu_percent}</td>
-                            <td>${proc.memory_percent}</td>
-                        `;
-                        processTable.appendChild(row);
-                    });
-                })
-                .catch(error => console.error('Error fetching system info:', error));
+    @keyframes progress {
+        0% {
+            stroke-dasharray: 0, 100;
         }
+    }
 
-        // 初始加载数据
-        updateSystemInfo();
+    .percentage {
+        font-size: 0.6em;
+        font-weight: bold;
+    }
 
-        // 每3秒更新一次数据
-        setInterval(updateSystemInfo, 3000);
+    .card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
 
-        // 窗口大小变化时重新调整图表大小
-        window.addEventListener('resize', function() {
-            diskChart.resize();
-            networkChart.resize();
-        });
-    </script>
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .progress {
+        border-radius: 10px;
+        background-color: #f5f5f5;
+    }
+
+    .progress-bar {
+        border-radius: 10px;
+    }
+
+    .table th {
+        font-weight: 500;
+    }
+
+    .badge {
+        font-weight: 400;
+        letter-spacing: 0.5px;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    // 自动刷新页面（每60秒）
+    setTimeout(function () {
+        window.location.reload();
+    }, 60000);
+
+    // 实时更新图表（示例）
+    function updateResourceUsage() {
+        fetch('/api/status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // 更新CPU使用率
+                    document.querySelector('.cpu-percent').textContent = data.data.resources.cpu.percent + '%';
+                    document.querySelector('.cpu-progress').style.width = data.data.resources.cpu.percent + '%';
+
+                    // 更新内存使用率
+                    document.querySelector('.memory-percent').textContent = data.data.resources.memory.percent + '%';
+                    document.querySelector('.memory-progress').style.width = data.data.resources.memory.percent + '%';
+                }
+            });
+    }
+
+    // 每10秒更新一次资源使用情况
+    setInterval(updateResourceUsage, 10000);
+</script>
 {% endblock %}

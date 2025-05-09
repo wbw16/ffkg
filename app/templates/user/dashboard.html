@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-4">管理员仪表盘</h1>
+
+    <div class="row mt-4">
+        <div class="col-xl-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-people-fill me-2"></i>
+                    用户统计
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card text-white bg-success mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">总用户数</h5>
+                                    <p class="card-text display-4">{{ total_users }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card text-white bg-info mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">本周新增</h5>
+                                    <p class="card-text display-4">{{ new_users }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-speedometer2 me-2"></i>
+                    系统概览
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        系统运行正常，暂无警告信息
+                    </div>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('admin.users') }}" class="btn btn-outline-primary">
+                            <i class="bi bi-people-fill me-2"></i>管理用户
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

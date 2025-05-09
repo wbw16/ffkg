@@ -1,13 +1,14 @@
+#app/extensions.py
 from flask_sqlalchemy import SQLAlchemy
-from neo4j import GraphDatabase
+from flask_login import LoginManager
+from flask_redis import FlaskRedis
 from py2neo import Graph
-
-
-
+from config import Config
 
 
 db = SQLAlchemy()
+login_manager = LoginManager()
+#extensions.py
+redis_client = FlaskRedis()
 
-
-# 在 extensions.py 中添加
-neo4j_graph = Graph("bolt://localhost:7687", auth=("neo4j", "12345678"))
+neo4j_graph = Graph(Config.NEO4J_URI, auth=Config.NEO4J_AUTH)

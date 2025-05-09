@@ -1,10 +1,187 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg rounded-lg overflow-hidden">
+                <div class="card-header bg-gradient-primary py-3">
+                    <h3 class="mb-0 text-white">
+                        <i class="fas fa-user-plus me-2"></i>创建新用户
+                    </h3>
+                </div>
+                <div class="card-body p-4 p-md-5">
+                    <form method="POST" action="{{ url_for('auth.create_user') }}" class="needs-validation" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <!-- 用户名 -->
+                        <div class="mb-4 row align-items-center">
+                            <label for="username" class="col-md-3 col-form-label fw-bold text-gray-700">
+                                <i class="fas fa-user me-1"></i>用户名
+                            </label>
+                            <div class="col-md-9">
+                                <div class="input-group">
+                                    {{ form.username(class="form-control rounded-pill py-2 px-3 border", placeholder="输入用户名", required=true) }}
+                                    <span class="input-group-text bg-transparent border-0">
+                                        <i class="fas fa-check-circle text-success d-none" id="username-valid"></i>
+                                    </span>
+                                </div>
+                                {% if form.username.errors %}
+                                    <div class="invalid-feedback d-block mt-1">
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ form.username.errors[0] }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- 密码 -->
+                        <div class="mb-4 row align-items-center">
+                            <label for="password" class="col-md-3 col-form-label fw-bold text-gray-700">
+                                <i class="fas fa-lock me-1"></i>密码
+                            </label>
+                            <div class="col-md-9">
+                                <div class="input-group">
+                                    {{ form.password(class="form-control rounded-pill py-2 px-3 border", placeholder="输入密码", required=true, id="passwordField") }}
+                                    <button class="btn btn-outline-secondary rounded-pill" type="button" id="togglePassword">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <small class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i>密码至少8位字符
+                                </small>
+                                {% if form.password.errors %}
+                                    <div class="invalid-feedback d-block mt-1">
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ form.password.errors[0] }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- 确认密码 -->
+                        <div class="mb-4 row align-items-center">
+                            <label for="confirm_password" class="col-md-3 col-form-label fw-bold text-gray-700">
+                                <i class="fas fa-lock me-1"></i>确认密码
+                            </label>
+                            <div class="col-md-9">
+                                <div class="input-group">
+                                    {{ form.confirm_password(class="form-control rounded-pill py-2 px-3 border", placeholder="再次输入密码", required=true) }}
+                                    <span class="input-group-text bg-transparent border-0">
+                                        <i class="fas fa-check-circle text-success d-none" id="confirm-valid"></i>
+                                    </span>
+                                </div>
+                                {% if form.confirm_password.errors %}
+                                    <div class="invalid-feedback d-block mt-1">
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ form.confirm_password.errors[0] }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- 管理员选项 -->
+                        <div class="mb-4 row">
+                            <div class="col-md-9 offset-md-3">
+                                <div class="custom-control custom-switch">
+                                    {{ form.is_admin(class="custom-control-input", id="adminSwitch") }}
+                                    <label class="custom-control-label fw-bold text-gray-700" for="adminSwitch">
+                                        <i class="fas fa-user-shield me-1"></i>设为管理员
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 操作按钮 -->
+                        <div class="row mt-5 pt-3 border-top">
+                            <div class="col-md-9 offset-md-3 d-flex justify-content-between">
+                                <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary rounded-pill px-4">
+                                    <i class="fas fa-arrow-left me-1"></i> 返回
+                                </a>
+                                <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                                    <i class="fas fa-user-plus me-1"></i> 创建用户
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* 覆盖admin_base.html样式 */
+    .card {
+        border: none;
+        box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1);
+    }
+
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+    }
+
+    .form-control {
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: #4e73df;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+    }
+
+    .btn-primary {
+        background-color: #4e73df;
+        border-color: #4e73df;
+    }
+
+    .btn-primary:hover {
+        background-color: #3a5bbf;
+        border-color: #3a5bbf;
+    }
+
+    .custom-switch .custom-control-label::before {
+        height: 1.5rem;
+        width: 2.75rem;
+        border-radius: 1rem;
+    }
+
+    .custom-switch .custom-control-label::after {
+        width: calc(1.5rem - 4px);
+        height: calc(1.5rem - 4px);
+        border-radius: 1rem;
+    }
+
+    .custom-switch .custom-control-input:checked ~ .custom-control-label::after {
+        transform: translateX(1.25rem);
+    }
+</style>
+
+<script>
+    // 密码显示/隐藏切换
+    document.getElementById('togglePassword').addEventListener('click', function() {
+        const passwordField = document.getElementById('passwordField');
+        const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordField.setAttribute('type', type);
+        this.querySelector('i').classList.toggle('fa-eye-slash');
+        this.querySelector('i').classList.toggle('fa-eye');
+    });
+
+    // 实时验证密码匹配
+    document.addEventListener('DOMContentLoaded', function() {
+        const passwordField = document.getElementById('passwordField');
+        const confirmField = document.querySelector('[name="confirm_password"]');
+        const confirmValid = document.getElementById('confirm-valid');
+
+        if(passwordField && confirmField) {
+            function checkPasswordMatch() {
+                if(passwordField.value && confirmField.value && passwordField.value === confirmField.value) {
+                    confirmValid.classList.remove('d-none');
+                } else {
+                    confirmValid.classList.add('d-none');
+                }
+            }
+
+            passwordField.addEventListener('input', checkPasswordMatch);
+            confirmField.addEventListener('input', checkPasswordMatch);
+        }
+    });
+</script>
+{% endblock %}

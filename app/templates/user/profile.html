@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-lg border-0 rounded-lg overflow-hidden">
+                <div class="card-header bg-gradient-primary py-3">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h3 class="mb-0 text-white">
+                            <i class="fas fa-user-circle me-2"></i>个人资料
+                        </h3>
+                        <a href="{{ url_for('auth.change_password') }}" class="btn btn-light btn-sm rounded-pill shadow-sm">
+                            <i class="fas fa-key me-1"></i> 修改密码
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-4 p-md-5">
+                    <form method="POST" action="{{ url_for('auth.profile') }}" class="needs-validation" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-4">
+                            <label for="username" class="form-label fw-bold text-gray-700">
+                                <i class="fas fa-user me-1"></i>用户名
+                            </label>
+                            <div class="input-group">
+                                {{ form.username(class="form-control rounded-pill py-2 px-3 border", placeholder="请输入用户名") }}
+                                <span class="input-group-text bg-transparent border-0">
+                                    <i class="fas fa-check-circle text-success d-none" id="username-valid"></i>
+                                </span>
+                            </div>
+                            {% for error in form.username.errors %}
+                                <div class="invalid-feedback d-block mt-1">
+                                    <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="email" class="form-label fw-bold text-gray-700">
+                                <i class="fas fa-envelope me-1"></i>邮箱
+                            </label>
+                            <div class="input-group">
+                                {{ form.email(class="form-control rounded-pill py-2 px-3 border", placeholder="请输入邮箱地址") }}
+                                <span class="input-group-text bg-transparent border-0">
+                                    <i class="fas fa-check-circle text-success d-none" id="email-valid"></i>
+                                </span>
+                            </div>
+                            {% for error in form.email.errors %}
+                                <div class="invalid-feedback d-block mt-1">
+                                    <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mt-5 pt-3 border-top">
+                            <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary rounded-pill px-4">
+                                <i class="fas fa-arrow-left me-1"></i> 返回首页
+                            </a>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                                <i class="fas fa-save me-1"></i> 更新资料
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* 覆盖base.html样式 */
+    .card {
+        border: none;
+        box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1);
+    }
+
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+    }
+
+    .form-control {
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: #4e73df;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+    }
+
+    .btn-primary {
+        background-color: #4e73df;
+        border-color: #4e73df;
+    }
+
+    .btn-primary:hover {
+        background-color: #3a5bbf;
+        border-color: #3a5bbf;
+    }
+</style>
+
+<script>
+    // 实时验证输入
+    document.addEventListener('DOMContentLoaded', function() {
+        const usernameInput = document.getElementById('username');
+        const emailInput = document.getElementById('email');
+        const usernameValid = document.getElementById('username-valid');
+        const emailValid = document.getElementById('email-valid');
+
+        if(usernameInput) {
+            usernameInput.addEventListener('input', function() {
+                if(this.value.length > 3) {
+                    usernameValid.classList.remove('d-none');
+                } else {
+                    usernameValid.classList.add('d-none');
+                }
+            });
+        }
+
+        if(emailInput) {
+            emailInput.addEventListener('input', function() {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if(emailRegex.test(this.value)) {
+                    emailValid.classList.remove('d-none');
+                } else {
+                    emailValid.classList.add('d-none');
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

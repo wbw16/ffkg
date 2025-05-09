@@ -1,73 +1,77 @@
-{% extends "admin_base.html" %}
+{% extends "base.html" %}
 
 {% block content %}
-<div class="container-fluid">
-  <h2 class="my-4">用户管理</h2>
+<div class="container-fluid px-4">
+  <div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h2 class="h3 mb-0 text-gray-800">用户管理</h2>
+  </div>
 
-  <div class="card shadow mb-4">
-    <div class="card-header py-3 d-flex justify-content-between align-items-center">
-      <h6 class="m-0 font-weight-bold text-primary">用户列表</h6>
-      <a href="{{ url_for('admin.add_user') }}" class="btn btn-success btn-sm">
-        <i class="fas fa-plus"></i> 添加用户
+  <div class="card shadow-lg rounded-lg">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+      <h6 class="m-0 font-weight-bold text-primary d-flex align-items-center">
+        <i class="fas fa-users mr-2"></i>用户列表
+      </h6>
+      <a href="{{ url_for('admin.add_user') }}" class="btn btn-success btn-sm shadow-sm">
+        <i class="fas fa-plus mr-1"></i> 添加用户
       </a>
     </div>
-    <div class="card-body">
+    <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
-          <thead class="thead-light">
+        <table class="table table-hover mb-0" id="dataTable" width="100%" cellspacing="0">
+          <thead class="bg-gray-100">
             <tr>
-              <th>ID</th>
-              <th>用户名</th>
-              <th>邮箱</th>
-              <th>角色</th>
-              <th>状态</th>
-              <th>注册时间</th>
-              <th>操作</th>
+              <th class="py-3 px-4">ID</th>
+              <th class="py-3 px-4">用户名</th>
+              <th class="py-3 px-4">邮箱</th>
+              <th class="py-3 px-4">角色</th>
+              <th class="py-3 px-4">状态</th>
+              <th class="py-3 px-4">注册时间</th>
+              <th class="py-3 px-4 text-center">操作</th>
             </tr>
           </thead>
           <tbody>
             {% for user in users %}
-            <tr>
-              <td>{{ user.id }}</td>
-              <td>{{ user.username }}</td>
-              <td>{{ user.email }}</td>
-              <td>
+            <tr class="border-bottom">
+              <td class="py-3 px-4">{{ user.id }}</td>
+              <td class="py-3 px-4 font-weight-bold">{{ user.username }}</td>
+              <td class="py-3 px-4 text-muted">{{ user.email }}</td>
+              <td class="py-3 px-4">
                 {% if user.is_admin %}
-                  <span class="badge badge-danger">管理员</span>
+                  <span class="badge badge-pill badge-danger py-1 px-2">管理员</span>
                 {% else %}
-                  <span class="badge badge-primary">普通用户</span>
+                  <span class="badge badge-pill badge-primary py-1 px-2">普通用户</span>
                 {% endif %}
               </td>
-              <td>
+              <td class="py-3 px-4">
                 {% if user.active %}
-                  <span class="badge badge-success">活跃</span>
+                  <span class="badge badge-pill badge-success py-1 px-2">活跃</span>
                 {% else %}
-                  <span class="badge badge-secondary">禁用</span>
+                  <span class="badge badge-pill badge-secondary py-1 px-2">禁用</span>
                 {% endif %}
               </td>
-              <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-              <td>
-                <div class="btn-group btn-group-sm">
+              <td class="py-3 px-4">{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+              <td class="py-3 px-4">
+                <div class="d-flex justify-content-center">
                   <a href="{{ url_for('admin.edit_user', user_id=user.id) }}"
-                     class="btn btn-primary btn-sm" title="编辑">
-                    <i class="fas fa-edit"></i>
+                     class="btn btn-outline-primary btn-sm mx-1 shadow-sm" title="编辑">
+                    <i class="fas fa-edit fa-sm"></i>
                   </a>
                   {% if not user.is_admin %}
                     {% if user.active %}
                       <a href="{{ url_for('admin.deactivate_user', user_id=user.id) }}"
-                         class="btn btn-warning btn-sm" title="禁用">
-                        <i class="fas fa-ban"></i>
+                         class="btn btn-outline-warning btn-sm mx-1 shadow-sm" title="禁用">
+                        <i class="fas fa-ban fa-sm"></i>
                       </a>
                     {% else %}
                       <a href="{{ url_for('admin.activate_user', user_id=user.id) }}"
-                         class="btn btn-success btn-sm" title="激活">
-                        <i class="fas fa-check"></i>
+                         class="btn btn-outline-success btn-sm mx-1 shadow-sm" title="激活">
+                        <i class="fas fa-check fa-sm"></i>
                       </a>
                     {% endif %}
                     <a href="{{ url_for('admin.delete_user', user_id=user.id) }}"
-                       class="btn btn-danger btn-sm" title="删除"
+                       class="btn btn-outline-danger btn-sm mx-1 shadow-sm" title="删除"
                        onclick="return confirm('确定要删除此用户吗？')">
-                      <i class="fas fa-trash"></i>
+                      <i class="fas fa-trash fa-sm"></i>
                     </a>
                   {% endif %}
                 </div>

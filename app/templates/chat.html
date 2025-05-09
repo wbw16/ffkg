@@ -1,80 +1,467 @@
 {% extends 'base.html' %}
 
-{% block title %}问答机器人{% endblock %}
-
 {% block content %}
-<div class="container mx-auto p-4 max-w-md">
-    <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="p-4 bg-blue-500 text-white text-center font-bold">问答机器人</div>
-        <div id="chat-window" class="h-96 overflow-y-auto p-4 space-y-4">
-            <!-- 聊天消息将在这里动态添加 -->
+
+<div class="container mx-auto max-w-3xl p-0">
+    <style>
+        /* Main styling */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container.mx-auto.max-w-3xl.p-0 {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+
+        /* Header styling */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #7BC6CC 0%, #BE93C5 100%);
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 12px 12px 0 0;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            font-size: 1.25rem;
+            letter-spacing: 0.5px;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+        }
+
+        /* Chat window styling */
+        #chat-window {
+            background-color: #ffffff;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: 1.5rem 2rem;
+            height: 40rem;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #c1c1c1 #f1f1f1;
+        }
+
+        #chat-window::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #chat-window::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        #chat-window::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        /* Message styling */
+        .message-container {
+            display: flex;
+            justify-content: center;
+        }
+
+        .message-content {
+            max-width: 80%;
+            padding: 0.75rem 1.25rem;
+            border-radius: 18px;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+            font-size: 1.05rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            background-color: #2d6a4f;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .bot-message {
+            background-color: #f8f9fa;
+            color: #495057;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Input area styling */
+        .input-area {
+            background-color: #ffffff;
+            border-radius: 0 0 12px 12px;
+            padding: 1.5rem;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .input-container {
+            display: flex;
+            width: 100%;
+            gap: 0.75rem;
+        }
+
+        #question-input {
+            transition: all 0.3s ease;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 0.85rem 1.25rem;
+            font-size: 0.95rem;
+            flex-grow: 1;
+        }
+
+        #question-input:focus {
+            border-color: #7BC6CC;
+            box-shadow: 0 0 0 3px rgba(123, 198, 204, 0.2);
+            outline: none;
+        }
+
+        /* Button styling */
+        #send-button {
+            background: linear-gradient(135deg, #7BC6CC 0%, #BE93C5 100%);
+            transition: all 0.3s ease;
+            border: none;
+            border-radius: 12px;
+            padding: 0 1.5rem;
+            color: white;
+            font-weight: 500;
+            min-width: 80px;
+        }
+
+        #send-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #clear-chat {
+            background-color: rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            border-radius: 20px;
+            padding: 0.5rem 1rem;
+            color: white;
+            font-weight: 500;
+            font-size: 0.9rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        #clear-chat:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-content {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Icon styling */
+        .fa-paper-plane {
+            font-size: 1.1rem;
+        }
+    </style>
+
+    <div class="header">
+        <div class="header-title">
+            <i class="fas fa-robot mr-2"></i>
+            <span>智能问答助手</span>
         </div>
-        <div class="flex p-4 border-t border-gray-200">
-            <input type="text" id="question-input" class="flex-1 border border-gray-300 rounded-md p-2 mr-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="输入你的问题">
-            <button id="send-button" class="bg-blue-500 text-white rounded-md p-2 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
-                <i class="fa-solid fa-paper-plane"></i>
+        <button id="clear-chat">
+            <i class="fas fa-trash-alt mr-1"></i>清除记录
+        </button>
+    </div>
+
+    <div id="chat-window" class="space-y-4">
+        <!-- 示例消息 -->
+        <div class="message-container justify-end">
+            <div class="message-content user-message">
+                你能为我做什么呢?
+            </div>
+        </div>
+        <div class="message-container justify-start">
+            <div class="message-content bot-message">
+                欢迎使用流域防洪知识平台小助手！我是专为流域防洪机关单位设计的专业助手，致力于提供准确、权威的防洪相关知识与技术支持。
+            </div>
+        </div>
+    </div>
+
+    <div class="input-area">
+        <div class="input-container">
+            <input type="text" id="question-input"
+                   placeholder="输入你的问题 (按Enter发送)">
+            <button id="send-button">
+                <i class="fa-solid fa-paper-plane mr-1"></i>发送
             </button>
         </div>
     </div>
 </div>
 
+<!-- 引入Markdown解析库 -->
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
 <script>
     const chatWindow = document.getElementById('chat-window');
     const questionInput = document.getElementById('question-input');
     const sendButton = document.getElementById('send-button');
+    const clearButton = document.getElementById('clear-chat');
 
-    sendButton.addEventListener('click', async () => {
+    // 从本地存储加载聊天记录
+    function loadChatHistory() {
+        const history = localStorage.getItem('chatHistory');
+        if (history) {
+            chatWindow.innerHTML = history;
+            scrollToBottom();
+        }
+    }
+
+    // 保存聊天记录到本地存储
+    function saveChatHistory() {
+        localStorage.setItem('chatHistory', chatWindow.innerHTML);
+    }
+
+    // 清除聊天记录
+    function clearChatHistory() {
+        if (confirm('确定要清除所有聊天记录吗？')) {
+            chatWindow.innerHTML = '';
+            localStorage.removeItem('chatHistory');
+        }
+    }
+
+    // 滚动到底部
+    function scrollToBottom() {
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    // 添加消息到聊天窗口
+    function addMessage(role, content) {
+        const messageContainer = document.createElement('div');
+        messageContainer.classList.add(role === 'user' ? 'user-message-container' : 'bot-message-container');
+
+        const messageContent = document.createElement('div');
+        messageContent.classList.add(role === 'user' ? 'user-message' : 'bot-message');
+
+        if (role === 'bot') {
+            messageContent.classList.add('markdown-content');
+            messageContent.innerHTML = marked.parse(content);
+        } else {
+            messageContent.textContent = content;
+        }
+
+        messageContainer.appendChild(messageContent);
+        chatWindow.appendChild(messageContainer);
+        scrollToBottom();
+        saveChatHistory();
+    }
+
+    // 显示加载状态
+    function showLoading() {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.classList.add('message-container', 'justify-start');
+        loadingDiv.innerHTML = `
+            <div class="message-content bot-message">
+                <div class="flex items-center">
+                    <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600 mr-3"></div>
+                    <span class="text-gray-600">思考中...</span>
+                </div>
+            </div>
+        `;
+        chatWindow.appendChild(loadingDiv);
+        scrollToBottom();
+        return loadingDiv;
+    }
+
+    // 发送问题
+    async function sendQuestion() {
         const question = questionInput.value.trim();
-        if (question) {
-            // 显示用户问题
-            const userMessage = document.createElement('div');
-            userMessage.classList.add('flex', 'justify-end');
-            userMessage.innerHTML = `<div class="bg-blue-100 text-blue-800 p-3 rounded-md max-w-xs">${question}</div>`;
-            chatWindow.appendChild(userMessage);
-            questionInput.value = '';
+        if (!question) return;
 
-            try {
-                // 发送请求到后端 API
-                const response = await fetch('/chat/api/ask', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ question })
-                });
+        addMessage('user', question);
+        questionInput.value = '';
 
-                const data = await response.json();
-                if (data.error) {
-                    // 显示错误消息
-                    const errorMessage = document.createElement('div');
-                    errorMessage.classList.add('flex', 'justify-start');
-                    errorMessage.innerHTML = `<div class="bg-red-100 text-red-800 p-3 rounded-md max-w-xs">${data.error}</div>`;
-                    chatWindow.appendChild(errorMessage);
-                } else {
-                    // 显示机器人回答
-                    const botMessage = document.createElement('div');
-                    botMessage.classList.add('flex', 'justify-start');
-                    botMessage.innerHTML = `<div class="bg-gray-100 text-gray-800 p-3 rounded-md max-w-xs">${data.answer}</div>`;
-                    chatWindow.appendChild(botMessage);
-                }
-            } catch (error) {
-                // 显示网络错误消息
-                const networkError = document.createElement('div');
-                networkError.classList.add('flex', 'justify-start');
-                networkError.innerHTML = `<div class="bg-red-100 text-red-800 p-3 rounded-md max-w-xs">网络错误，请稍后再试</div>`;
-                chatWindow.appendChild(networkError);
+        const loadingElement = showLoading();
+
+        try {
+            const response = await fetch('/chat/api/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({question})
+            });
+
+            const data = await response.json();
+            chatWindow.removeChild(loadingElement);
+
+            if (data.error) {
+                addMessage('bot', `抱歉，出现错误: ${data.error}`);
+            } else {
+                addMessage('bot', data.answer);
             }
-
-            // 滚动到聊天窗口底部
-            chatWindow.scrollTop = chatWindow.scrollHeight;
+        } catch (error) {
+            chatWindow.removeChild(loadingElement);
+            addMessage('bot', '网络连接出现问题，请稍后再试');
+            console.error('API请求失败:', error);
         }
+    }
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+        loadChatHistory();
+
+        // 事件监听
+        sendButton.addEventListener('click', sendQuestion);
+        clearButton.addEventListener('click', clearChatHistory);
+
+        questionInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendQuestion();
+            }
+        });
     });
 
-    // 支持回车键发送问题
-    questionInput.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-            sendButton.click();
+    // Markdown内容样式
+    const style = document.createElement('style');
+    style.textContent = `
+        .markdown-content {
+            max-width: 90%;
+            margin: 0 auto;
+            font-size: 1.1em;
+            line-height: 1.6;
         }
-    });
+        .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+            font-weight: bold;
+            margin: 1.2em 0 0.8em 0;
+        }
+        .markdown-content h1 {
+            font-size: 1.6em;
+            color: #2d6a4f;
+            border-bottom: 2px solid #eaeaea;
+            padding-bottom: 0.3em;
+        }
+        .markdown-content h2 {
+            font-size: 1.4em;
+            color: #3a4a6b;
+        }
+        .markdown-content h3 {
+            font-size: 1.2em;
+            color: #495057;
+        }
+        .markdown-content p {
+            margin: 0.8em 0;
+            text-align: justify;
+        }
+        .markdown-content ul, .markdown-content ol {
+            margin: 0.8em 0;
+            padding-left: 2em;
+        }
+        .markdown-content li {
+            margin: 0.4em 0;
+        }
+        .markdown-content code {
+            background-color: #f0f0f0;
+            padding: 0.3em 0.5em;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+        }
+        .markdown-content pre {
+            background-color: #f5f5f5;
+            padding: 1.2em;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1em 0;
+        }
+        .markdown-content pre code {
+            background-color: transparent;
+            padding: 0;
+            border-radius: 0;
+        }
+        .markdown-content blockquote {
+            border-left: 4px solid #7BC6CC;
+            padding: 0.8em 1.2em;
+            background-color: #f8f9fa;
+            color: #555;
+            margin: 1em 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .markdown-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1em 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .markdown-content th, .markdown-content td {
+            border: 1px solid #ddd;
+            padding: 0.8em;
+            text-align: left;
+        }
+        .markdown-content th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .markdown-content img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 1em auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .markdown-content a {
+            color: #4a89dc;
+            text-decoration: none;
+        }
+        .markdown-content a:hover {
+            text-decoration: underline;
+        }
+       .user-message-container {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 1rem;
+    }
+
+    .user-message {
+        background-color: #2d6a4f;
+        color: white;
+        padding: 0.75rem 1.25rem;
+        border-radius: 18px;
+        max-width: 80%;
+        margin-left: auto; /* 确保靠右 */
+        border-bottom-right-radius: 4px;
+    }
+
+    /* 机器人消息样式 - 保持靠左 */
+    .bot-message-container {
+        display: flex;
+        justify-content: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .bot-message {
+        background-color: #f8f9fa;
+        color: #495057;
+        padding: 0.75rem 1.25rem;
+        border-radius: 18px;
+        max-width: 80%;
+        border-bottom-left-radius: 4px;
+    }
+    `;
+    document.head.appendChild(style);
 </script>
 {% endblock %}
